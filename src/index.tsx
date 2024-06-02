@@ -19,7 +19,7 @@ app.onError((err, c) => {
 app.notFound(c => c.text('Not found', 404));
 
 app.get('/', (c) => {
-  return c.render(<h1>Hello!</h1><p>This is a placeholder.</p>)
+  return c.render(<p>Hello! This is a placeholder.</p>)
 })
 
 export default app
