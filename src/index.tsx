@@ -2,15 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { renderer } from './renderer'
 
-interface User {
-      name: string
-      email: string
-      role: string
-}
 
-type Bindings = {
-      DB: D1Database
-}
 
 const app = new Hono<{Bindings: Bindings}>()
 app.use(renderer)
