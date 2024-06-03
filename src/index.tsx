@@ -17,20 +17,19 @@ app.use(renderer)
 app.use('/api/*', cors())
 
 app.get('/api/users/:slug', async c => {
-        //TODO is it safe to expose the ID?
-	const { slug } = c.req.param();
-	const { results } = await c.env.DB.prepare(`SELECT * FROM users WHERE id = ?`)
+	const { slug } = c.req.param()
+	const { results } = await c.env.DB.prepare(`SELECT * FROM users WHERE uuid = ?`)
 		.bind(slug)
 		.all();
 	return c.json(results)
 })
 
 app.post('/api/users', async c => {
-	const { name, email, role } = await c.req.json<User>();
+	const { name, email, role } = await c.req.json<User>()
 
-	if (!name) return c.text('Missing name value for new user');
-	if (!email) return c.text('Missing email value for new user');
-	if (!role) return c.text('Missing role value for new user');
+	if (!name) return c.text('Missing name value for new user')
+	if (!email) return c.text('Missing email value for new user')
+	if (!role) return c.text('Missing role value for new user')
 
         //TODO fields are separate tables maybe need sproc
 	const { success } = await c.env.DB.prepare(
@@ -40,23 +39,23 @@ app.post('/api/users', async c => {
 		.run();
 
 	if (success) {
-		c.status(201);
-		return c.text('Created');
+		c.status(201)
+		return c.text('Created')
 	} else {
-		c.status(500);
-		return c.text('Something went wrong');
+		c.status(500)
+		return c.text('Something went wrong')
 	}
 })
 
 app.onError((err, c) => {
-	console.error(`${err}`);
-	return c.text(err.toString());
+	console.error(`${err}`)
+	return c.text(err.toString())
 })
 
-app.notFound(c => c.text('Not found', 404));
+app.notFound(c => c.text('Not found', 404))
 
 app.get('/', (c) => {
-  return c.render(<p>Hello! This is a placeholder.</p>)
+      return c.render(<p>Hello! This is a placeholder.</p>)
 })
 
 export default app
