@@ -15,11 +15,10 @@ jobs:
       - name: Publish
         uses: cloudflare/wrangler-action@v3
         with:
-          command: pages deploy
+          command: pages deploy dist
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: hello-hono
-          directory: dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
           commitDirty: true
 
