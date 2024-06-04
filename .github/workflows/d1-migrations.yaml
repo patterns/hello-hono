@@ -5,6 +5,13 @@ on:
     branches:
       - main
 
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Placeholder: <dev|staging|prod>"
+        required: true
+        default: "dev"
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
