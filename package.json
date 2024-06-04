@@ -1,6 +1,7 @@
 {
   "type": "module",
   "scripts": {
+    "db:drop": "drizzle-kit drop",
     "db:generate": "drizzle-kit generate",
     "db:migrate:prod": "wrangler d1 migrations apply d1-hello-hono",
     "dev": "vite",
