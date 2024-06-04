@@ -8,15 +8,15 @@ jobs:
     name: Deploy to Cloudflare Pages
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build
         run: npm install && npm run build
       - name: Publish
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
+          command: pages deploy dist --project-name=hello-hono --commit-dirty=true
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: hello-hono
-          directory: dist
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+
