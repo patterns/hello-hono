@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { drizzle } from 'drizzle-orm/d1'
+import { eq } from 'drizzle-orm'
 import { renderer } from './renderer'
 import { members } from './schema'
 
@@ -10,23 +11,20 @@ app.use(renderer)
 app.use('/api/*', cors())
 
 app.get('/api/users', async c => {
-	const { slug } = c.req.param()
 	const db = drizzle(c.env.DB)
-	////const result = await db.select().from(members)
-	const result = await db.query.members.findMany({
-	  columns: {
-	    name: true,
-	    role: true,
-	    guid: true
-	  },
-	})
+	const result = await db.select({
+	    name: members.name,
+	    role: members.role,
+	    guid: members.guid,
+	}).from(members)
 	return c.json(result)
 })
+
 app.get('/api/users/:guid', async c => {
 	const { guid } = c.req.param()
 	const db = drizzle(c.env.DB)
 
-	////const result = await db.select().from(members)
+	////const result = await db.select().from(members).where(eq(members.guid, guid))
 	const result = await db.query.members.findFirst({
 	  where: (member, { eq }) => eq(member.guid, guid),
 	  columns: { name: true, email: true, role: true },
