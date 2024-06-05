@@ -9,7 +9,7 @@ declare module 'hono' {
     Bindings: { DB: D1Database }
   }
 
-  interface User {
+  interface Member {
     name: string
     email: string
     role: string
