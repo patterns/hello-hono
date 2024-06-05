@@ -1,14 +1,23 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { bearerAuth } from 'hono/bearer-auth'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 import { renderer } from './renderer'
 import { members } from './schema'
 
+const privilegedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
 const app = new Hono<{Bindings: Bindings}>()
 app.use(renderer)
 app.use('/api/*', cors())
+
+// start by requiring header (Authorization: Bearer)
+app.on(privilegedMethods, '/api/*', async (c, next) => {
+  // Single valid privileged token
+  const bearer = bearerAuth({ token: c.env.BEARER_TOKEN })
+  return bearer(c, next)
+})
 
 app.get('/api/users', async c => {
 	const db = drizzle(c.env.DB)

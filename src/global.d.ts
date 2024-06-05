@@ -6,7 +6,10 @@ declare module 'hono' {
   }
 
   interface Env {
-    Bindings: { DB: D1Database }
+    Bindings: {
+      DB: D1Database
+      BEARER_TOKEN: string
+    }
   }
 
   interface Member {
