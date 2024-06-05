@@ -15,7 +15,7 @@ jobs:
       - name: Publish
         uses: cloudflare/wrangler-action@v3
         with:
-          command: pages deploy dist --project-name=hello-hono --commit-dirty=true --compatibility-flag=nodejs_compat
+          command: pages deploy dist --project-name=hello-hono --commit-dirty=true
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
