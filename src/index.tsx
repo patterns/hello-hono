@@ -9,16 +9,21 @@ const app = new Hono<{Bindings: Bindings}>()
 app.use(renderer)
 app.use('/api/*', cors())
 
-app.get('/api/users/:slug', async c => {
+app.get('/api/users', async c => {
 	const { slug } = c.req.param()
 	const db = drizzle(c.env.DB)
-	const result = await db.query.members.findMany()
-/*
-.findFirst({
-  where: (member, { eq }) => eq(member.guid, slug),
-  columns: { name: true, email: true, role: true },
+	const result = await db.select(members)
+	return c.json(result)
 })
-*/
+app.get('/api/users/:guid', async c => {
+	const { guid } = c.req.param()
+	const db = drizzle(c.env.DB)
+
+	const result = await db.query.members.findFirst({
+	  where: (member, { eq }) => eq(member.guid, guid),
+	  columns: { name: true, email: true, role: true },
+	})
+
 	return c.json(result)
 })
 
