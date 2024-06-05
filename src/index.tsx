@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { drizzle } from 'drizzle-orm/d1'
 import { renderer } from './renderer'
-
+import { members } from './schema'
 
 
 const app = new Hono<{Bindings: Bindings}>()
@@ -10,33 +11,34 @@ app.use('/api/*', cors())
 
 app.get('/api/users/:slug', async c => {
 	const { slug } = c.req.param()
-	const { results } = await c.env.DB.prepare(`SELECT * FROM users WHERE uuid = ?`)
-		.bind(slug)
-		.all();
-	return c.json(results)
+	const db = drizzle(c.env.DB)
+	const result = await db.query.members.findMany()
+/*
+.findFirst({
+  where: (member, { eq }) => eq(member.guid, slug),
+  columns: { name: true, email: true, role: true },
+})
+*/
+	return c.json(result)
 })
 
 app.post('/api/users', async c => {
-	const { name, email, role } = await c.req.json<User>()
+	const { name, email, role } = await c.req.json<Member>()
 
 	if (!name) return c.text('Missing name value for new user')
 	if (!email) return c.text('Missing email value for new user')
 	if (!role) return c.text('Missing role value for new user')
 
-        //TODO fields are separate tables maybe need sproc
-	const { success } = await c.env.DB.prepare(
-		`INSERT into users (name, email, role) VALUES (?, ?, ?)`
-	)
-		.bind(name, email, role)
-		.run();
-
-	if (success) {
-		c.status(201)
-		return c.text('Created')
-	} else {
+	try {
+		const db = drizzle(c.env.DB)
+		await db.insert(members).values({ name: name, email: email, role: role })
+	} catch {
 		c.status(500)
 		return c.text('Something went wrong')
 	}
+
+	c.status(201)
+	return c.text('Created')
 })
 
 app.onError((err, c) => {

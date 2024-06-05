@@ -1,4 +1,8 @@
 # hello-hono
 migrate from Express to Hono ?
 
-error from wrangler d1 migration as multistep pages build command
+
+## dev notes
+- using wrangler gh action for d1 migrations 
+- todo, do we need to drop all tables before migrations?
+
