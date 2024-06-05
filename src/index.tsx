@@ -23,13 +23,7 @@ app.get('/api/users', async c => {
 app.get('/api/users/:guid', async c => {
 	const { guid } = c.req.param()
 	const db = drizzle(c.env.DB)
-
-	////const result = await db.select().from(members).where(eq(members.guid, guid))
-	const result = await db.query.members.findFirst({
-	  where: (member, { eq }) => eq(member.guid, guid),
-	  columns: { name: true, email: true, role: true },
-	})
-
+	const result = await db.select().from(members).where(eq(members.guid, guid))
 	return c.json(result)
 })
 
