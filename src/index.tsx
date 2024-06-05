@@ -12,13 +12,21 @@ app.use('/api/*', cors())
 app.get('/api/users', async c => {
 	const { slug } = c.req.param()
 	const db = drizzle(c.env.DB)
-	const result = await db.select().from(members)
+	////const result = await db.select().from(members)
+	const result = await db.query.members.findMany({
+	  columns: {
+	    name: true,
+	    role: true,
+	    guid: true
+	  },
+	})
 	return c.json(result)
 })
 app.get('/api/users/:guid', async c => {
 	const { guid } = c.req.param()
 	const db = drizzle(c.env.DB)
 
+	////const result = await db.select().from(members)
 	const result = await db.query.members.findFirst({
 	  where: (member, { eq }) => eq(member.guid, guid),
 	  columns: { name: true, email: true, role: true },
