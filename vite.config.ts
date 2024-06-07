@@ -4,7 +4,6 @@ import adapter from '@hono/vite-dev-server/cloudflare'
 import { defineConfig } from 'vite'
 
 export default defineConfig(({ mode }) => {
-
   if (mode === 'client') {
     return {
       build: {
@@ -17,7 +16,7 @@ export default defineConfig(({ mode }) => {
       },
     }
   } else {
-
+  return {
   plugins: [
     build(),
     devServer({
@@ -25,6 +24,5 @@ export default defineConfig(({ mode }) => {
       entry: 'src/index.tsx'
     })
   ]
-
-  }
+  }}
 })
