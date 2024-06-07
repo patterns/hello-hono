@@ -5,13 +5,15 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate:prod": "wrangler d1 migrations apply d1-hello-hono",
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --mode client && vite build",
     "preview": "wrangler pages dev",
     "deploy": "$npm_execpath run build && wrangler pages deploy"
   },
   "dependencies": {
     "drizzle-orm": "^0.31.0",
     "@paralleldrive/cuid2": "^2.2.2",
+    "firebase": "^10.12.2",
+    "firebaseui": "^6.1.0",
     "hono": "^4.4.2"
   },
   "devDependencies": {

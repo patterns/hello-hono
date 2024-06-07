@@ -62,8 +62,27 @@ app.onError((err, c) => {
 
 app.notFound(c => c.text('Not found', 404))
 
+
+
 app.get('/', (c) => {
-      return c.render(<p>Hello! This is a placeholder.</p>)
+  return c.html(
+    <html>
+      <head>
+        {import.meta.env.PROD ? (
+          <script type='module' src='/static/client.js'></script>
+        ) : (
+          <script type='module' src='/src/client.ts'></script>
+        )}
+      </head>
+      <body>
+
+
+<h1>Welcome to PLACEHOLDER</h1>
+<div id="firebaseui-auth-container"></div>
+<div id="loader">Loading...</div>
+      </body>
+    </html>
+  )
 })
 
 export default app

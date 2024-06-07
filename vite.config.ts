@@ -3,7 +3,21 @@ import devServer from '@hono/vite-dev-server'
 import adapter from '@hono/vite-dev-server/cloudflare'
 import { defineConfig } from 'vite'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+
+  if (mode === 'client') {
+    return {
+      build: {
+        rollupOptions: {
+          input: './src/client.ts',
+          output: {
+            entryFileNames: 'static/client.js',
+          },
+        },
+      },
+    }
+  } else {
+
   plugins: [
     build(),
     devServer({
@@ -11,4 +25,6 @@ export default defineConfig({
       entry: 'src/index.tsx'
     })
   ]
+
+  }
 })
