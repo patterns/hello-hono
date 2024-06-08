@@ -95,8 +95,7 @@ app.get('/login', csrf(), async c => {
           getAuth,
           signInWithPopup,
           OAuthProvider,
-          onAuthStateChanged,
-          signOut,
+          GoogleAuthProvider,
           setPersistence,
           inMemoryPersistence,
         } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
@@ -106,7 +105,6 @@ app.get('/login', csrf(), async c => {
           projectId: '${fbaProject}',
         });
         const auth = getAuth(app);
-
         setPersistence(auth, inMemoryPersistence);
 
         /**
@@ -126,6 +124,7 @@ app.get('/login', csrf(), async c => {
         function postIdTokenToSessionLogin(url, idToken) {
           // Purpose, used by login page (browser) to submit a post request to the server which records id token and derives session cookie.
           // (a non-js form submit could work also which can be visible as a page refresh)
+          console.log('ET phone home, ' + url)
 
           // POST to session login endpoint.
           return $.ajax({
@@ -133,32 +132,29 @@ app.get('/login', csrf(), async c => {
             url: url,
             data: JSON.stringify({ idToken: idToken }),
             contentType: 'application/json',
-          });
+          })
         }
 
         $('#sign-in').on('click', function () {
-          console.log('clicked');
-          const provider = new OAuthProvider('google.com');
-          // Start a sign in process for an unauthenticated user.
-          provider.addScope('email');
-
+          const provider = new OAuthProvider('google.com')
+          provider.addScope('email')
           signInWithPopup(auth, provider)
-            .then(({ user }) => {
-              // Get the user's ID token as it is needed to exchange for a session cookie.
-              const idToken = user.accessToken;
-              // Session login endpoint is queried and the session cookie is set.
-              // CSRF protection should be taken into account.
-              // ...
+            .then(({ result }) => {
+              const credential = GoogleAuthProvider.credentialFromResult(result)
+              const token = credential.accessToken
+              ////const idToken = result.user.accessToken;
               const csrfToken = getCookie('csrfToken');
-              return postIdTokenToSessionLogin('/login_session', idToken, csrfToken);
+              return postIdTokenToSessionLogin('/login_session', token, csrfToken);
+            }).catch((error) => {
+              console.log("fail code, " + error.code + ": " + error.message)
+              // The AuthCredential type that was used.
+              ////const credential = GoogleAuthProvider.credentialFromError(error);
+
             })
             .then(() => {
-              // A page redirect would suffice as the persistence is set to NONE.
-              return signOut(auth);
+              ////window.location.assign('/dash/hello');
+              console.log("redirect to hello page normally goes here.");
             })
-            .then(() => {
-              window.location.assign('/dash/hello');
-            });
         });
       </script>
     </body>
