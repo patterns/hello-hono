@@ -92,7 +92,7 @@ app.get('/login', csrf(), async c => {
 
   <!-- Insert this script at the bottom of the HTML, but before you use any Firebase services -->
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'
+    import { initializeApp, firebase } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'
 
     // Add Firebase products that you want to use
     import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
