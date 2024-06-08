@@ -77,88 +77,65 @@ app.get('/login', csrf(), async c => {
   const fbaKey = c.env.FIREBASE_API_KEY
   const fbaDomain = c.env.FIREBASE_AUTH_DOMAIN
   const fbaProject = c.env.FIREBASE_PROJECT_ID
-  const content = await html`<html>
+  const fbaBucket = c.env.FIREBASE_STORAGE_BUCKET
+  const content = await html`<!DOCTYPE html>
+  <html>
     <head>
       <meta charset="UTF-8" />
-      <title>Login</title>
-    </head>
-    <body>
-      <h1>Login Page</h1>
-      <button id="sign-in" type="button">Sign-In</button>
-      <script type="module">
-        // See https://firebase.google.com/docs/auth/admin/manage-cookies
-        //
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-app.js';
-        import $ from 'https://cdn.skypack.dev/jquery';
-        // Add Firebase products that you want to use
-        import {
-          getAuth,
-          signInWithPopup,
-          OAuthProvider,
-          GoogleAuthProvider,
-          setPersistence,
-          inMemoryPersistence,
-        } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
-        const app = initializeApp({
+      <title>Sample FirebaseUI</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+    const fba = firebase.initializeApp({
           apiKey: '${fbaKey}',
           authDomain: '${fbaDomain}',
           projectId: '${fbaProject}',
-        });
-        const auth = getAuth(app);
-        setPersistence(auth, inMemoryPersistence);
+          storageBucket: '${fbaBucket}',
+    })
+</script>
+    <script src="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.css" />
+  <script type="text/javascript">
+// Initialize the FirebaseUI Widget using Firebase.
+var ui = new firebaseui.auth.AuthUI(firebase.auth())
+var uiConfig = {
+  callbacks: {
+    signInSuccessWithAuthResult: function(authResult, redirectUrl) {
+      // User successfully signed in.
+      // Return type determines whether we continue the redirect automatically
+      // or whether we leave that to developer to handle.
+      return true;
+    },
+    uiShown: function() {
+      // The widget is rendered.
+      // Hide the loader.
+      document.getElementById('loader').style.display = 'none';
+    }
+  },
+  // Will use popup for IDP Providers sign-in flow instead of the default, redirect.
+  signInFlow: 'popup',
+  signInSuccessUrl: 'https://github.com/patterns/hello-hono',
+  signInOptions: [
+    // List of OAuth providers supported.
+    firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+  ],
+  // Terms of service url.
+  tosUrl: 'https://github.com/patterns/',
+  // Privacy policy url.
+  privacyPolicyUrl: 'https://github.com/patterns/'
+}
 
-        /**
-         * @param {string} name The cookie name.
-         * @return {?string} The corresponding cookie value to lookup.
-         */
-        function getCookie(name) {
-          const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-          return v ? v[2] : null;
-        }
+ui.start('#firebaseui-auth-container', uiConfig)
 
-        /**
-         * @param {string} url The session login endpoint.
-         * @param {string} idToken The ID token to post to backend.
-         * @return {any} A jQuery promise that resolves on completion.
-         */
-        function postIdTokenToSessionLogin(url, idToken) {
-          // Purpose, used by login page (browser) to submit a post request to the server which records id token and derives session cookie.
-          // (a non-js form submit could work also which can be visible as a page refresh)
-          console.log('ET phone home, ' + url)
 
-          // POST to session login endpoint.
-          return $.ajax({
-            type: 'POST',
-            url: url,
-            data: JSON.stringify({ idToken: idToken }),
-            contentType: 'application/json',
-          })
-        }
-
-        $('#sign-in').on('click', function () {
-          const provider = new OAuthProvider('google.com')
-          provider.addScope('email')
-          signInWithPopup(auth, provider)
-            .then(({ result }) => {
-              const credential = GoogleAuthProvider.credentialFromResult(result)
-              const token = credential.accessToken
-              ////const idToken = result.user.accessToken;
-              const csrfToken = getCookie('csrfToken');
-              return postIdTokenToSessionLogin('/login_session', token, csrfToken);
-            }).catch((error) => {
-              console.log("fail code, " + error.code + ": " + error.message)
-              // The AuthCredential type that was used.
-              ////const credential = GoogleAuthProvider.credentialFromError(error);
-
-            })
-            .then(() => {
-              ////window.location.assign('/dash/hello');
-              console.log("redirect to hello page normally goes here.");
-            })
-        });
-      </script>
-    </body>
-  </html>`;
+  </script>
+    </head>
+<body>
+<h1>Welcome to </h1>
+<div id="firebaseui-auth-container"></div>
+<div id="loader">Loading...</div>
+</body>
+</html>`;
   return c.html(content)
 })
 
