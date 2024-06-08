@@ -77,37 +77,27 @@ app.get('/login', csrf(), async c => {
   const fbaKey = c.env.FIREBASE_API_KEY
   const fbaDomain = c.env.FIREBASE_AUTH_DOMAIN
   const fbaProject = c.env.FIREBASE_PROJECT_ID
+  const fbaBucket = c.env.FIREBASE_STORAGE_BUCKET
   const content = await html`<!DOCTYPE html>
   <html>
     <head>
       <meta charset="UTF-8" />
-      <title>Login</title>
-<script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
-<link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
-    </head>
-<body>
-<h1>Welcome to </h1>
-<div id="firebaseui-auth-container"></div>
-<div id="loader">Loading...</div>
-
-  <!-- Insert this script at the bottom of the HTML, but before you use any Firebase services -->
-  <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'
-
-    // Add Firebase products that you want to use
-    import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
-
-
-    const fba = initializeApp({
+      <title>Sample FirebaseUI</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+    const fba = firebase.initializeApp({
           apiKey: '${fbaKey}',
           authDomain: '${fbaDomain}',
           projectId: '${fbaProject}',
+          storageBucket: '${fbaBucket}',
     })
-
-
-
-    // Initialize the FirebaseUI Widget using Firebase.
-var ui = new firebaseui.auth.AuthUI(getAuth(fba))
+</script>
+    <script src="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.css" />
+  <script type="text/javascript">
+// Initialize the FirebaseUI Widget using Firebase.
+var ui = new firebaseui.auth.AuthUI(firebase.auth())
 var uiConfig = {
   callbacks: {
     signInSuccessWithAuthResult: function(authResult, redirectUrl) {
@@ -139,6 +129,11 @@ ui.start('#firebaseui-auth-container', uiConfig)
 
 
   </script>
+    </head>
+<body>
+<h1>Welcome to </h1>
+<div id="firebaseui-auth-container"></div>
+<div id="loader">Loading...</div>
 </body>
 </html>`;
   return c.html(content)
