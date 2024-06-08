@@ -82,6 +82,7 @@ app.get('/login', csrf(), async c => {
     <head>
       <meta charset="UTF-8" />
       <title>Login</title>
+<script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
 <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.css" />
     </head>
 <body>
@@ -102,9 +103,9 @@ app.get('/login', csrf(), async c => {
           authDomain: '${fbaDomain}',
           projectId: '${fbaProject}',
     })
-  </script>
-  <script src="https://www.gstatic.com/firebasejs/ui/6.0.1/firebase-ui-auth.js"></script>
-  <script type="module">
+
+
+
     // Initialize the FirebaseUI Widget using Firebase.
 var ui = new firebaseui.auth.AuthUI(firebase.auth())
 var uiConfig = {
