@@ -5,13 +5,15 @@ import { html } from 'hono/html'
 import { bearerAuth } from 'hono/bearer-auth'
 import { getCookie, setCookie } from 'hono/cookie'
 import {
-  VerifyFirebaseAuthConfig,
+  VerifySessionCookieFirebaseAuthConfig,
   VerifyFirebaseAuthEnv,
-  verifyFirebaseAuth,
+  verifySessionCookieFirebaseAuth,
   getFirebaseToken,
+} from '@hono/firebase-auth'
+import {
   AdminAuthApiClient,
   ServiceAccountCredential,
-} from '@hono/firebase-auth'
+} from 'firebase-auth-cloudflare-workers'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 import { renderer } from './renderer'
@@ -19,10 +21,18 @@ import { members } from './schema'
 
 const privilegedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 
+const config: VerifySessionCookieFirebaseAuthConfig = {
+  // specify your firebase project ID.
+  projectId: 'hello-hono-a9a15',
+  redirects: {
+    signIn: "/login"
+  }
+}
+
+
 const app = new Hono<{Bindings: Bindings}>()
 app.use(renderer)
 app.use('/api/*', cors())
-app.use('/dash/*', csrf());
 
 
 // start by requiring header (Authorization: Bearer)
@@ -70,7 +80,7 @@ app.post('/api/users', async c => {
 
 
 // admin-panel (dashboard)
-app.get('/dash/login', async c => {
+app.get('/login', csrf(), async c => {
   const fbaKey = c.env.FIREBASE_API_KEY
   const fbaDomain = c.env.FIREBASE_AUTH_DOMAIN
   const fbaProject = c.env.FIREBASE_PROJECT_ID
@@ -147,14 +157,14 @@ app.get('/dash/login', async c => {
               // CSRF protection should be taken into account.
               // ...
               const csrfToken = getCookie('csrfToken');
-              return postIdTokenToSessionLogin('/dash/login_session', idToken, csrfToken);
+              return postIdTokenToSessionLogin('/login_session', idToken, csrfToken);
             })
             .then(() => {
               // A page redirect would suffice as the persistence is set to NONE.
               return signOut(auth);
             })
             .then(() => {
-              window.location.assign('/dash/profile');
+              window.location.assign('/dash/hello');
             });
         });
       </script>
@@ -163,8 +173,8 @@ app.get('/dash/login', async c => {
   return c.html(content)
 })
 
-// TODO how do we know who is sending post request? (maybe enforce Bearer token)
-app.post('/dash/login_session', async c => {
+
+app.post('/login_session', csrf(), async c => {
   const json = await c.req.json()
   const idToken = json.idToken
   if (!idToken || typeof idToken !== 'string') {
@@ -192,34 +202,13 @@ app.post('/dash/login_session', async c => {
   return c.json({ message: 'success' })
 })
 
-// TODO which routes, watch out for circular
-////app.use('/dash/profile', verifyFirebaseAuth(config))
-
-app.get('/dash/profile', async c => {
-  const conf: VerifyFirebaseAuthConfig = {projectId: c.env.FIREBASE_PROJECT_ID}
-  const verifierMiddle = verifyFirebaseAuth(conf)
-  const debugVeri = verifierMiddle(c, null)
-  return c.json(debugVeri)
-
-  /*****************
-  const session = getCookie(c, 'session') ?? ''
-  const auth = Auth.getOrInitialize(
-    c.env.FIREBASE_PROJECT_ID,
-    WorkersKVStoreSingle.getOrInitialize(c.env.PUBLIC_JWK_CACHE_KEY, c.env.PUBLIC_JWK_CACHE_KV)
-  )
-
-  try {
-    const decodedToken = await auth.verifySessionCookie(
-      session,
-      false,
-    )
-    return c.json(decodedToken)
-  } catch (err) {
-    return c.redirect('/dash/login')
-  }
-  **********************/
-
+// middleware
+app.use('/dash/*', csrf(), verifySessionCookieFirebaseAuth(config));
+app.get('/dash/hello', (c) => {
+  const idToken = getFirebaseToken(c) // get id-token object.
+  return c.json(idToken)
 })
+
 
 app.onError((err, c) => {
 	console.error(`${err}`)

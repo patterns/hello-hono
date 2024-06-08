@@ -13,6 +13,7 @@
     "drizzle-orm": "^0.31.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@hono/firebase-auth": "^1.4.1",
+    "firebase-auth-cloudflare-workers": "^2.0.4",
     "hono": "^4.4.4"
   },
   "devDependencies": {
