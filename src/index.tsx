@@ -95,6 +95,7 @@ app.get('/login', csrf(), async c => {
           getAuth,
           signInWithPopup,
           OAuthProvider,
+          GoogleAuthProvider,
           setPersistence,
           inMemoryPersistence,
         } from 'https://www.gstatic.com/firebasejs/10.5.0/firebase-auth.js';
@@ -139,8 +140,8 @@ app.get('/login', csrf(), async c => {
           provider.addScope('email')
           signInWithPopup(auth, provider)
             .then(({ result }) => {
-              const credential = provider.credentialFromResult(auth, result);
-              const token = credential.accessToken;
+              const credential = GoogleAuthProvider.credentialFromResult(result)
+              const token = credential.accessToken
               ////const idToken = result.user.accessToken;
               const csrfToken = getCookie('csrfToken');
               return postIdTokenToSessionLogin('/login_session', token, csrfToken);
