@@ -92,13 +92,13 @@ app.get('/login', csrf(), async c => {
 
   <!-- Insert this script at the bottom of the HTML, but before you use any Firebase services -->
   <script type="module">
-    import { initializeApp, firebase } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js'
 
     // Add Firebase products that you want to use
     import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js'
 
 
-    const app = initializeApp({
+    const fba = initializeApp({
           apiKey: '${fbaKey}',
           authDomain: '${fbaDomain}',
           projectId: '${fbaProject}',
@@ -107,7 +107,7 @@ app.get('/login', csrf(), async c => {
 
 
     // Initialize the FirebaseUI Widget using Firebase.
-var ui = new firebaseui.auth.AuthUI(firebase.auth())
+var ui = new firebaseui.auth.AuthUI(getAuth(fba))
 var uiConfig = {
   callbacks: {
     signInSuccessWithAuthResult: function(authResult, redirectUrl) {
