@@ -13,6 +13,7 @@ import {
 import {
   AdminAuthApiClient,
   ServiceAccountCredential,
+  WorkersKVStoreSingle,
 } from 'firebase-auth-cloudflare-workers'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
@@ -20,14 +21,6 @@ import { renderer } from './renderer'
 import { members } from './schema'
 
 const privilegedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
-
-const config: VerifySessionCookieFirebaseAuthConfig = {
-  // specify your firebase project ID.
-  projectId: 'hello-hono-a9a15',
-  redirects: {
-    signIn: "/login"
-  }
-}
 
 
 const app = new Hono<{Bindings: Bindings}>()
@@ -203,7 +196,21 @@ app.post('/login_session', csrf(), async c => {
 })
 
 // middleware
-app.use('/dash/*', csrf(), verifySessionCookieFirebaseAuth(config));
+////app.use('/dash/*', csrf(), verifySessionCookieFirebaseAuth(config));
+app.on(privilegedMethods, '/dash/*', async (c, next) => {
+  const conf: VerifySessionCookieFirebaseAuthConfig = {
+    projectId: c.env.FIREBASE_PROJECT_ID,
+    keyStore: WorkersKVStoreSingle.getOrInitialize(c.env.PUBLIC_JWK_CACHE_KEY, c.env.PUBLIC_JWK_CACHE_KV),
+    redirects: {
+      signIn: "/login"
+    }
+  }
+
+  const middle = verifySessionCookieFirebaseAuth(conf)
+  return middle(c, next)
+})
+
+
 app.get('/dash/hello', (c) => {
   const idToken = getFirebaseToken(c) // get id-token object.
   return c.json(idToken)
