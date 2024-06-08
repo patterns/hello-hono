@@ -139,12 +139,13 @@ app.get('/login', csrf(), async c => {
           provider.addScope('email')
           signInWithPopup(auth, provider)
             .then(({ result }) => {
-              const idToken = result.user.accessToken;
+              const credential = provider.credentialFromResult(auth, result);
+              const token = credential.accessToken;
+              ////const idToken = result.user.accessToken;
               const csrfToken = getCookie('csrfToken');
-              return postIdTokenToSessionLogin('/login_session', idToken, csrfToken);
+              return postIdTokenToSessionLogin('/login_session', token, csrfToken);
             }).catch((error) => {
               console.log("fail code, " + error.code + ": " + error.message)
-              console.log("fail on email, " +  error.customData.email)
               // The AuthCredential type that was used.
               ////const credential = GoogleAuthProvider.credentialFromError(error);
 
