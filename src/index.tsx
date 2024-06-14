@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { sign } from 'hono/jwt'
 import { cors } from 'hono/cors'
 import { csrf } from 'hono/csrf'
 import { html } from 'hono/html'
@@ -20,7 +21,7 @@ import { eq } from 'drizzle-orm'
 import { renderer } from './renderer'
 import { members } from './schema'
 
-const privilegedMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
 
 
 const app = new Hono<{Bindings: Bindings}>()
@@ -29,22 +30,26 @@ app.use('/api/*', cors())
 
 
 // start by requiring header (Authorization: Bearer)
-app.on(privilegedMethods, '/api/*', async (c, next) => {
+app.on(privilegedMethods, '/api/users', async (c, next) => {
   // Single valid privileged token
   const bearer = bearerAuth({ token: c.env.BEARER_TOKEN })
   return bearer(c, next)
 })
 
+
+// list users
 app.get('/api/users', async c => {
 	const db = drizzle(c.env.DB)
 	const result = await db.select({
-	    name: members.name,
-	    role: members.role,
-	    guid: members.guid,
+	    firstName: members.name,
+	    lastName: members.role,
+	    username: members.email,
+	    id: members.guid,
 	}).from(members)
 	return c.json(result)
 })
 
+// user by id
 app.get('/api/users/:guid', async c => {
 	const { guid } = c.req.param()
 	const db = drizzle(c.env.DB)
@@ -52,7 +57,22 @@ app.get('/api/users/:guid', async c => {
 	return c.json(result)
 })
 
-app.post('/api/users', async c => {
+// user update
+app.put('/api/users/:guid', async c => {
+	const { guid } = c.req.param()
+	c.status(501)
+	return c.text('TODO user update goes here')
+})
+
+// user delete
+app.delete('/api/users/:guid', async c => {
+	const { guid } = c.req.param()
+	c.status(501)
+	return c.text('TODO user delete goes here')
+})
+
+// create user (a.k.a. "register")
+app.put('/api/users', async c => {
 	const { name, email, role } = await c.req.json<Member>()
 
 	if (!name) return c.text('Missing name value for new user')
@@ -71,8 +91,29 @@ app.post('/api/users', async c => {
 	return c.text('Created')
 })
 
+// expected by nextjs proto
+app.post('/api/users/authenticate', async c => {
+	const { username } = await c.req.json()
+	const db = drizzle(c.env.DB)
+	const result = await db.select().from(members).where(eq(members.email, username))
+	const { name, email, role, guid } = result
+	const payload = {
+	  sub: guid,
+	  exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // Token expires in 24 hours
+	}
+	const secret = c.env.JWT_SECRET
+	const token = await sign(payload, secret)
+        const user = {firstName: name, lastName: role, username: email, id: guid}
+	return c.json({ ...user, token })
+})
+// expected by nextjs proto
+app.post('/api/users/register', async c => {
+	c.status(501)
+	return c.text('TODO user register goes here')
+})
 
-// admin-panel (dashboard)
+
+// admin-panel (skeleton); using prebuild firebase widget (TODO refactor away the hono/firebase-auth if we don't utilize kv/sessions)
 app.get('/login', csrf(), async c => {
   const fbaKey = c.env.FIREBASE_API_KEY
   const fbaDomain = c.env.FIREBASE_AUTH_DOMAIN

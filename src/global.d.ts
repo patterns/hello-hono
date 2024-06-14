@@ -9,6 +9,7 @@ declare module 'hono' {
     Bindings: {
       DB: D1Database
       BEARER_TOKEN: string
+      JWT_SECRET: string
       SERVICE_ACCOUNT_JSON: string
       PUBLIC_JWK_CACHE_KV: string
       PUBLIC_JWK_CACHE_KEY: string
