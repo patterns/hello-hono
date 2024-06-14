@@ -1,9 +1,10 @@
 import { Hono } from 'hono'
-import { sign } from 'hono/jwt'
 import { cors } from 'hono/cors'
 import { csrf } from 'hono/csrf'
 import { html } from 'hono/html'
-import { bearerAuth } from 'hono/bearer-auth'
+////import { bearerAuth } from 'hono/bearer-auth'
+import { jwt, sign } from 'hono/jwt'
+import type { JwtVariables } from 'hono/jwt'
 import { getCookie, setCookie } from 'hono/cookie'
 import {
   VerifySessionCookieFirebaseAuthConfig,
@@ -21,21 +22,26 @@ import { eq } from 'drizzle-orm'
 import { renderer } from './renderer'
 import { members } from './schema'
 
+type Variables = JwtVariables
 const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
 
 
-const app = new Hono<{Bindings: Bindings}>()
+const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 app.use(renderer)
 app.use('/api/*', cors())
 
-
+/*****
 // start by requiring header (Authorization: Bearer)
 app.on(privilegedMethods, '/api/users', async (c, next) => {
   // Single valid privileged token
   const bearer = bearerAuth({ token: c.env.BEARER_TOKEN })
   return bearer(c, next)
 })
-
+*****/
+app.on(privilegedMethods, '/api/users', (c, next) => {
+  const jwtmw = jwt({ secret: c.env.JWT_SECRET })
+  return jwtmw(c, next)
+})
 
 // list users
 app.get('/api/users', async c => {
