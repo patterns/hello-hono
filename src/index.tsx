@@ -92,7 +92,7 @@ ui.start('#firebaseui-auth-container', uiConfig)
   return c.html(content)
 })
 
-
+/*
 app.post('/login_session', csrf(), async c => {
   const json = await c.req.json()
   const idToken = json.idToken
@@ -141,7 +141,7 @@ app.get('/dash/hello', (c) => {
   const idToken = getFirebaseToken(c) // get id-token object.
   return c.json(idToken)
 })
-
+*/
 
 app.onError((err, c) => {
 	console.error(`${err}`)

@@ -19,14 +19,7 @@ app.on(privilegedMethods, '/', (c, next) => {
 // list courses
 app.get('/', async c => {
 	const db = drizzle(c.env.DB)
-	const result = await db.select({
-	    title: courses.title,
-	    description: courses.description,
-	    category: courses.category,
-	    published: courses.published,
-	    url: courses.url,
-	    id: courses.guid,
-	}).from(courses)
+	const result = await db.select().from(courses)
 	return c.json(result)
 })
 
