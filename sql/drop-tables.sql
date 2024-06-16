@@ -1,5 +1,7 @@
 
 DROP TABLE IF EXISTS Members;
+DROP TABLE IF EXISTS Courses;
+DROP TABLE IF EXISTS Lessons;
 
 
 

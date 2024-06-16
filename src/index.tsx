@@ -17,11 +17,13 @@ import {
 
 import { renderer } from './renderer'
 import users from './users'
+import courses from './courses'
 
 const app = new Hono<{Bindings: Bindings}>()
 app.use(renderer)
 app.use('/api/*', cors())
 app.route('/api/users', users)
+app.route('/api/courses', courses)
 
 // admin-panel (skeleton); using prebuild firebase widget (TODO refactor away the hono/firebase-auth if we don't utilize kv/sessions)
 app.get('/login', csrf(), async c => {
