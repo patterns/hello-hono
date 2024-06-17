@@ -1,20 +1,37 @@
 import { Hono } from 'hono'
-import { jwt, sign } from 'hono/jwt'
-import type { JwtVariables } from 'hono/jwt'
+////import { jwt, sign } from 'hono/jwt'
+////import type { JwtVariables } from 'hono/jwt'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 
+import {
+  verifyRsaJwt,
+  getPayloadFromContext,
+  createGetCookieByKey,
+} from 'verify-rsa-jwt-cloudflare-worker'
+
 import { courses } from './schema'
 
-type Variables = JwtVariables
 const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
+const app = new Hono<{Bindings: Bindings}>()
+// CF Access JWT
+app.on(privilegedMethods, '/', (c, next) => {
+  const middleware = verifyRsaJwt({
+    jwksUri: c.env.JWKS_URI,
+    kvstore: c.env.VERIFY_RSA_JWT,
+    payloadValidator: ({payload, c}) => { /* chk role/AUD, else throw err */ },
+  })
+  return middleware(c, next)
+})
+/*
+type Variables = JwtVariables
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
-
 // require token except on POST
 app.on(privilegedMethods, '/', (c, next) => {
   const jwtmw = jwt({ secret: c.env.JWT_SECRET })
   return jwtmw(c, next)
 })
+*/
 
 // list courses
 app.get('/', async c => {

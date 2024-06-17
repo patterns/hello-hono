@@ -8,9 +8,10 @@ declare module 'hono' {
   interface Env {
     Bindings: {
       DB: D1Database
-      BEARER_TOKEN: string
-      JWT_SECRET: string
       SERVICE_ACCOUNT_JSON: string
+      POLICY_AUD: string
+      JWKS_URI: string
+      VERIFY_RSA_JWT: string
       PUBLIC_JWK_CACHE_KV: string
       PUBLIC_JWK_CACHE_KEY: string
       FIREBASE_PROJECT_ID: string

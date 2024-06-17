@@ -1,20 +1,37 @@
 import { Hono } from 'hono'
-import { jwt, sign } from 'hono/jwt'
-import type { JwtVariables } from 'hono/jwt'
+////import { jwt, sign } from 'hono/jwt'
+////import type { JwtVariables } from 'hono/jwt'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 
+import {
+  verifyRsaJwt,
+  getPayloadFromContext,
+  createGetCookieByKey,
+} from 'verify-rsa-jwt-cloudflare-worker'
+
 import { members } from './schema'
 
-type Variables = JwtVariables
 const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
-const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 
+const app = new Hono<{Bindings: Bindings}>()
+app.on(privilegedMethods, '/', (c, next) => {
+  const verifymw = verifyRsaJwt({
+    jwksUri: c.env.JWKS_URI,
+    kvstore: c.env.VERIFY_RSA_JWT,
+    payloadValidator: ({payload, c}) => { /* chk role/AUD, else throw err */ },
+  })
+  return verifymw(c, next)
+})
+/*
+////type Variables = JwtVariables
+////const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 // require token except on POST
 app.on(privilegedMethods, '/', (c, next) => {
   const jwtmw = jwt({ secret: c.env.JWT_SECRET })
   return jwtmw(c, next)
 })
+*/
 
 // list users
 app.get('/', async c => {
@@ -70,6 +87,7 @@ app.put('/', async c => {
 	return c.text('Created')
 })
 
+// TODO nextjs consumer will send JWT header, then we don't need user/pw fields
 // expected by nextjs proto
 app.post('/authenticate', async c => {
 	const { username } = await c.req.json()
