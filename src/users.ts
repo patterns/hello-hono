@@ -15,7 +15,7 @@ import {
 } from 'verify-rsa-jwt-cloudflare-worker'
 
 import { members } from './schema'
-type Variables: VerifyRsaJwtEnv
+type Variables = VerifyRsaJwtEnv
 const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
 
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
