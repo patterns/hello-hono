@@ -2,18 +2,6 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { csrf } from 'hono/csrf'
 import { html } from 'hono/html'
-import { getCookie, setCookie } from 'hono/cookie'
-import {
-  VerifySessionCookieFirebaseAuthConfig,
-  VerifyFirebaseAuthEnv,
-  verifySessionCookieFirebaseAuth,
-  getFirebaseToken,
-} from '@hono/firebase-auth'
-import {
-  AdminAuthApiClient,
-  ServiceAccountCredential,
-  WorkersKVStoreSingle,
-} from 'firebase-auth-cloudflare-workers'
 
 import { renderer } from './renderer'
 import users from './users'
@@ -25,7 +13,10 @@ app.use('/api/*', cors())
 app.route('/api/users', users)
 app.route('/api/courses', courses)
 
-// admin-panel (skeleton); using prebuild firebase widget (TODO refactor away the hono/firebase-auth if we don't utilize kv/sessions)
+
+
+// (skeleton, may go away since we are consuming CF Access JWT)
+// admin-panel, guarded by prebuild firebase widget 
 app.get('/login', csrf(), async c => {
   const fbaKey = c.env.FIREBASE_API_KEY
   const fbaDomain = c.env.FIREBASE_AUTH_DOMAIN
@@ -92,56 +83,6 @@ ui.start('#firebaseui-auth-container', uiConfig)
   return c.html(content)
 })
 
-/*
-app.post('/login_session', csrf(), async c => {
-  const json = await c.req.json()
-  const idToken = json.idToken
-  if (!idToken || typeof idToken !== 'string') {
-    return c.json({ message: 'invalid idToken' }, 400)
-  }
-  // Set session expiration to 5 days.
-  const expiresIn = 60 * 60 * 24 * 5 * 1000
-  // Create the session cookie. This will also verify the ID token in the process.
-  // The session cookie will have the same claims as the ID token.
-  // To only allow session cookie setting on recent sign-in, auth_time in ID token
-  // can be checked to ensure user was recently signed in before creating a session cookie.
-  const auth = AdminAuthApiClient.getOrInitialize(
-    c.env.FIREBASE_PROJECT_ID,
-    new ServiceAccountCredential(c.env.SERVICE_ACCOUNT_JSON)
-  )
-  const sessionCookie = await auth.createSessionCookie(
-    idToken,
-    expiresIn,
-  )
-  setCookie(c, 'session', sessionCookie, {
-    maxAge: expiresIn,
-    httpOnly: true,
-    secure: true
-  })
-  return c.json({ message: 'success' })
-})
-
-// middleware
-////app.use('/dash/*', csrf(), verifySessionCookieFirebaseAuth(config));
-app.on(privilegedMethods, '/dash/*', async (c, next) => {
-  const conf: VerifySessionCookieFirebaseAuthConfig = {
-    projectId: c.env.FIREBASE_PROJECT_ID,
-    keyStore: WorkersKVStoreSingle.getOrInitialize(c.env.PUBLIC_JWK_CACHE_KEY, c.env.PUBLIC_JWK_CACHE_KV),
-    redirects: {
-      signIn: "/login"
-    }
-  }
-
-  const middle = verifySessionCookieFirebaseAuth(conf)
-  return middle(c, next)
-})
-
-
-app.get('/dash/hello', (c) => {
-  const idToken = getFirebaseToken(c) // get id-token object.
-  return c.json(idToken)
-})
-*/
 
 app.onError((err, c) => {
 	console.error(`${err}`)

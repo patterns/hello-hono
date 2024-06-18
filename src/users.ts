@@ -1,20 +1,41 @@
 import { Hono } from 'hono'
-import { jwt, sign } from 'hono/jwt'
-import type { JwtVariables } from 'hono/jwt'
+////import { jwt, sign } from 'hono/jwt'
+////import type { JwtVariables } from 'hono/jwt'
 import { drizzle } from 'drizzle-orm/d1'
 import { eq } from 'drizzle-orm'
 
+import {
+  getJwks,
+  useKVStore,
+  verify,
+  VerifyRsaJwtEnv,
+  verifyRsaJwt,
+  getPayloadFromContext,
+  createGetCookieByKey,
+} from 'verify-rsa-jwt-cloudflare-worker'
+
 import { members } from './schema'
-
-type Variables = JwtVariables
+type Variables = VerifyRsaJwtEnv
 const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
-const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 
+const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
+app.on(privilegedMethods, '/', (c, next) => {
+  const verifymw = verifyRsaJwt({
+    jwksUri: c.env.JWKS_URI,
+    kvstore: c.env.VERIFY_RSA_JWT,
+    payloadValidator: ({payload, c}) => { /* chk role/AUD, else throw err */ },
+  })
+  return verifymw(c, next)
+})
+/*
+////type Variables = JwtVariables
+////const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 // require token except on POST
 app.on(privilegedMethods, '/', (c, next) => {
   const jwtmw = jwt({ secret: c.env.JWT_SECRET })
   return jwtmw(c, next)
 })
+*/
 
 // list users
 app.get('/', async c => {
@@ -70,8 +91,18 @@ app.put('/', async c => {
 	return c.text('Created')
 })
 
+// TODO nextjs consumer will send JWT header, then we don't need user/pw fields
 // expected by nextjs proto
 app.post('/authenticate', async c => {
+	const token = c.req.header('Cf-Access-Jwt-Assertion')
+	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT));
+	const { ztpl } = await verify(token, jwks);
+	if (ztpl.aud !== c.env.POLICY_AUD) {
+		c.status(500)
+		return c.json({})
+	}
+	// TODO get ztpl.email, and register (default role:student) if not exists
+
 	const { username } = await c.req.json()
 	const db = drizzle(c.env.DB)
 	const result = await db.select().from(members).where(eq(members.email, username))
@@ -81,7 +112,7 @@ app.post('/authenticate', async c => {
 	  exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // Token expires in 24 hours
 	}
 	const secret = c.env.JWT_SECRET
-	const token = await sign(payload, secret)
+	const deprecateBearer = await sign(payload, secret)
         const user = {firstName: name, lastName: role, username: email, id: guid}
 	return c.json({ ...user, token })
 })
