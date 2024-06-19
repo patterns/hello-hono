@@ -114,11 +114,12 @@ app.post('/authenticate', async c => {
 		c.status(500)
 		return c.json({})
 	}
-	// TODO get pl.email, and register (default role:student) if not exists
+	// TODO get , and register (default role:student) if not exists
+	const ztemail = payload.email
 
-	const { username } = await c.req.json()
+	////const { username } = await c.req.json()
 	const db = drizzle(c.env.DB)
-	const result = await db.select().from(members).where(eq(members.email, username))
+	const result = await db.select().from(members).where(eq(members.email, ztemail))
 	const { name, email, role, guid } = result
 /*
 	const newpl = {
@@ -127,9 +128,10 @@ app.post('/authenticate', async c => {
 	}
 	const secret = c.env.JWT_SECRET
 	const deprecateBearer = await sign(newpl, secret)
-*/
         const user = {firstName: name, lastName: role, username: email, id: guid}
-	////return c.json({ ...user, token })
+	return c.json({ ...user, token })
+*/
+        const user = {name: name, role: role, email: email, guid: guid}
 	return c.json({ ...user })
 })
 // expected by nextjs proto
