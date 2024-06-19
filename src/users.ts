@@ -117,10 +117,11 @@ app.post('/identify', async c => {
 */
 
 	// TODO ? and register (default role:student) if not exists
-
-	// database can have latency, what do we do if rows not found
 	const db = drizzle(c.env.DB)
-	const result = await db.select().from(members).where(eq(members.guid, payload.sub))
+	////const result = await db.select().from(members).where(eq(members.guid, payload.sub))
+	const result = await db.query.members.findFirst({
+	  where: (members, {eq}) => eq(members.guid, payload.sub),
+	})
 	const { name, email, role, guid } = result
 /*
 	const newpl = {
