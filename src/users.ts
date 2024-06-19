@@ -132,7 +132,7 @@ app.post('/identify', async c => {
 	return c.json({ ...user, token })
 */
         ////const user = {name: name, role: role, email: email, guid: guid}
-        const user = {name: 'debug it', role: 'student', email: 'debug@spaceacademy.edu', guid: 'testabc123'}
+        const user = {name: 'debug it', role: 'student', email: payload.email, guid: 'testabc123'}
 	return c.json({ ...user })
 })
 // expected by nextjs proto
