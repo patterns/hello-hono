@@ -120,7 +120,7 @@ app.post('/identify', async c => {
 
 	// database can have latency, what do we do if rows not found
 	const db = drizzle(c.env.DB)
-	const result = await db.select().from(members).where(eq(members.email, payload.email))
+	const result = await db.select().from(members).where(eq(members.guid, payload.sub))
 	const { name, email, role, guid } = result
 /*
 	const newpl = {
