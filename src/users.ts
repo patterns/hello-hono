@@ -116,7 +116,9 @@ app.post('/identify', async c => {
 	}
 */
 
-	// TODO get , and register (default role:student) if not exists
+	// TODO ? and register (default role:student) if not exists
+
+	// database can have latency, what do we do if rows not found
 	const db = drizzle(c.env.DB)
 	const result = await db.select().from(members).where(eq(members.email, payload.email))
 	const { name, email, role, guid } = result
@@ -130,8 +132,7 @@ app.post('/identify', async c => {
         const user = {firstName: name, lastName: role, username: email, id: guid}
 	return c.json({ ...user, token })
 */
-        ////const user = {name: name, role: role, email: email, guid: guid}
-        const user = {name: 'debug it', role: role, email: payload.email, guid: guid}
+        const user = {name: name, role: role, email: payload.email, refid: payload.sub}
 	return c.json({ ...user })
 })
 // expected by nextjs proto
