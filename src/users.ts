@@ -105,7 +105,7 @@ app.put('/', async c => {
 })
 
 // expected by nextjs proto
-app.post('/authenticate', async c => {
+app.post('/identify', async c => {
 	const token = c.req.header('Cf-Access-Jwt-Assertion')
 	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
 	const { payload } = await verify(token, jwks)
@@ -113,7 +113,7 @@ app.post('/authenticate', async c => {
 	if (payload.aud[0] !== c.env.POLICY_AUD) {
 		c.status(500)
 		return c.json({})
-	}*/
+	}
 	// TODO get , and register (default role:student) if not exists
 	const ztemail = payload.email
 
@@ -121,7 +121,7 @@ app.post('/authenticate', async c => {
 	const db = drizzle(c.env.DB)
 	const result = await db.select().from(members).where(eq(members.email, ztemail))
 	const { name, email, role, guid } = result
-/*
+
 	const newpl = {
 	  sub: guid,
 	  exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // Token expires in 24 hours
@@ -131,7 +131,8 @@ app.post('/authenticate', async c => {
         const user = {firstName: name, lastName: role, username: email, id: guid}
 	return c.json({ ...user, token })
 */
-        const user = {name: name, role: role, email: email, guid: guid}
+        ////const user = {name: name, role: role, email: email, guid: guid}
+        const user = {name: 'debug it', role: 'student', email: 'debug@spaceacademy.edu', guid: 'testabc123'}
 	return c.json({ ...user })
 })
 // expected by nextjs proto
