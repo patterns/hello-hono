@@ -110,18 +110,17 @@ app.post('/identify', async c => {
 	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
 	const { payload } = await verify(token, jwks)
 /* DEBUG skip aud check for now
-	if (payload.aud[0] !== c.env.POLICY_AUD) {
+	if (payload.aud[0] != c.env.POLICY_AUD) {
 		c.status(500)
 		return c.json({})
 	}
+*/
+
 	// TODO get , and register (default role:student) if not exists
-	const ztemail = payload.email
-
-	////const { username } = await c.req.json()
 	const db = drizzle(c.env.DB)
-	const result = await db.select().from(members).where(eq(members.email, ztemail))
+	const result = await db.select().from(members).where(eq(members.email, payload.email))
 	const { name, email, role, guid } = result
-
+/*
 	const newpl = {
 	  sub: guid,
 	  exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // Token expires in 24 hours
@@ -132,7 +131,7 @@ app.post('/identify', async c => {
 	return c.json({ ...user, token })
 */
         ////const user = {name: name, role: role, email: email, guid: guid}
-        const user = {name: 'debug it', role: 'student', email: payload.email, guid: 'testabc123'}
+        const user = {name: 'debug it', role: role, email: payload.email, guid: guid}
 	return c.json({ ...user })
 })
 // expected by nextjs proto
