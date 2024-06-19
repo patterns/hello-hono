@@ -120,14 +120,17 @@ app.post('/authenticate', async c => {
 	const db = drizzle(c.env.DB)
 	const result = await db.select().from(members).where(eq(members.email, username))
 	const { name, email, role, guid } = result
+/*
 	const newpl = {
 	  sub: guid,
 	  exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // Token expires in 24 hours
 	}
 	const secret = c.env.JWT_SECRET
 	const deprecateBearer = await sign(newpl, secret)
+*/
         const user = {firstName: name, lastName: role, username: email, id: guid}
-	return c.json({ ...user, token })
+	////return c.json({ ...user, token })
+	return c.json({ ...user })
 })
 // expected by nextjs proto
 app.post('/register', async c => {
