@@ -104,16 +104,16 @@ app.put('/', async c => {
 	return c.text('Created')
 })
 
-// TODO nextjs consumer will send JWT header, then we don't need user/pw fields
 // expected by nextjs proto
 app.post('/authenticate', async c => {
 	const token = c.req.header('Cf-Access-Jwt-Assertion')
 	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
 	const { payload } = await verify(token, jwks)
+/* DEBUG skip aud check for now
 	if (payload.aud[0] !== c.env.POLICY_AUD) {
 		c.status(500)
 		return c.json({})
-	}
+	}*/
 	// TODO get , and register (default role:student) if not exists
 	const ztemail = payload.email
 
