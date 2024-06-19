@@ -9,6 +9,7 @@ import {
   useKVStore,
   verify,
   VerifyRsaJwtEnv,
+  VerificationResult,
   verifyRsaJwt,
   getPayloadFromContext,
   createGetCookieByKey,
@@ -17,6 +18,18 @@ import {
 import { members } from './schema'
 type Variables = VerifyRsaJwtEnv
 const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
+/*
+interface AppTokenPayload {
+  aud: string[]
+  email: string
+  exp: Number
+  iat: Number
+  nbf: Number
+  iss: string
+  type: string
+  sub: string
+  country: string
+}*/
 
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 app.on(privilegedMethods, '/', (c, next) => {
@@ -95,24 +108,24 @@ app.put('/', async c => {
 // expected by nextjs proto
 app.post('/authenticate', async c => {
 	const token = c.req.header('Cf-Access-Jwt-Assertion')
-	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT));
-	const { ztpl } = await verify(token, jwks);
-	if (ztpl.aud !== c.env.POLICY_AUD) {
+	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
+	const { payload } = await verify(token, jwks)
+	if (payload.aud[0] !== c.env.POLICY_AUD) {
 		c.status(500)
 		return c.json({})
 	}
-	// TODO get ztpl.email, and register (default role:student) if not exists
+	// TODO get pl.email, and register (default role:student) if not exists
 
 	const { username } = await c.req.json()
 	const db = drizzle(c.env.DB)
 	const result = await db.select().from(members).where(eq(members.email, username))
 	const { name, email, role, guid } = result
-	const payload = {
+	const newpl = {
 	  sub: guid,
 	  exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24, // Token expires in 24 hours
 	}
 	const secret = c.env.JWT_SECRET
-	const deprecateBearer = await sign(payload, secret)
+	const deprecateBearer = await sign(newpl, secret)
         const user = {firstName: name, lastName: role, username: email, id: guid}
 	return c.json({ ...user, token })
 })
