@@ -71,6 +71,20 @@ app.delete('/:guid', async c => {
 
 // create user
 app.post('/', async c => {
+	const token = c.req.header('Cf-Access-Jwt-Assertion')
+	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
+	const { payload } = await verify(token, jwks)
+
+	// Do validation on the payload fields.
+
+	const aud = payload.aud
+	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
+		return c.json({ err: "AUD fail" }, 500)
+	}
+
+	// TODO Two flows, superuser is creating or visitor is registering.
+	// BUT if we go with a pending approval queue, create should never be done by person.
+
 	const { name, email, role } = await c.req.json<Member>()
 
 	if (!name) return c.text('Missing name value for new user')
@@ -78,8 +92,11 @@ app.post('/', async c => {
 	if (!role) return c.text('Missing role value for new user')
 
 	try {
-		const db = drizzle(c.env.DB)
-		await db.insert(members).values({ name: name, email: email, role: role })
+		////const db = drizzle(c.env.DB)
+		////await db.insert(members).values({ name: name, email: email, role: role })
+		// TODO insert requires email/guid to be unique
+		const stmt = c.env.DB.prepare('INSERT (?1, ?2, ?3) COLUMNS(NAME, EMAIL, ROLE) INTO members').bind(name, email, role)
+		await stmt.run()
 	} catch {
 		c.status(500)
 		return c.text('Something went wrong')
@@ -93,7 +110,7 @@ app.post('/', async c => {
 app.post('/identify', async c => {
 	// The identify endpoint is for initial contact by the nextjs consumer.
 	// We still expect visitors to sign-in via Cloudflare Access (e.g., via registration flow).
-
+/*
 	const token = c.req.header('Cf-Access-Jwt-Assertion')
 	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
 	const { payload } = await verify(token, jwks)
@@ -103,11 +120,11 @@ app.post('/identify', async c => {
 	const aud = payload.aud
 	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
 		return c.json({ err: "AUD fail" }, 500)
+	}*/
+	const { payload, good } = await sanitycheckAUD(c)
+	if (!good) {
+		return c.json({ err: "AUD fail" }, 500)
 	}
-	////const {payload, passed} = await sanitycheckAUD(c)
-	////if (!passed) {
-	////	return c.json({ err: "AUD fail" }, 500)
-	////}
 
 	// TODO ? and register (default role:student) if not exists
 	try {
@@ -129,7 +146,8 @@ app.post('/identify', async c => {
 	}
 })
 
-async function enforceAUD(c) {
+// TODO busted code?
+async function sanitycheckAUD(c) {
 	const token = c.req.header('Cf-Access-Jwt-Assertion')
 	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
 	const { payload } = await verify(token, jwks)
@@ -138,10 +156,11 @@ async function enforceAUD(c) {
 
 	const aud = payload.aud
 	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
-		return { payload: payload, passed: false }
+		return { payload: payload, good: false }
 	}
 
-	return { payload: payload, passed: true }
+	return { payload: payload, good: true }
 }
+
 
 export default app
