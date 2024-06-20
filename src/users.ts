@@ -49,7 +49,8 @@ app.get('/', async c => {
 		const { results, success } = await stmt.all()
 		if (success) {
 			if (results && results.length >= 1) {
-				return c.json({ ...results })
+				const users = results
+				return c.json({ ...users })
 			} else {
 				return c.json({ err: "Zero members" }, 500)
 			}
@@ -58,8 +59,6 @@ app.get('/', async c => {
 	} catch(e) {
 		return c.json({ err: e.message }, 500)
 	}
-
-	return c.json(result)
 })
 
 // user by id
