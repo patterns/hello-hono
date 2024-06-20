@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 
-import { drizzle } from 'drizzle-orm/d1'
-import { eq } from 'drizzle-orm'
+////import { drizzle } from 'drizzle-orm/d1'
+////import { eq } from 'drizzle-orm'
 
 import {
   getJwks,
@@ -14,7 +14,7 @@ import {
   createGetCookieByKey,
 } from 'verify-rsa-jwt-cloudflare-worker'
 
-import { members } from './schema'
+////import { members } from './schema'
 type Variables = VerifyRsaJwtEnv
 const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
 
@@ -34,22 +34,59 @@ app.on(privilegedMethods, '/', (c, next) => {
 
 // list users
 app.get('/', async c => {
-
+/*
 	const db = drizzle(c.env.DB)
 	const result = await db.select({
 	    firstName: members.name,
 	    lastName: members.role,
 	    username: members.email,
 	    id: members.guid,
-	}).from(members)
+	}).from(members)*/
+
+	// Retrieve the users in the Members table.
+	try {
+		const stmt = c.env.DB.prepare('SELECT NAME,EMAIL,ROLE,GUID FROM members WHERE DELETED IS NULL')
+		const { results, success } = await stmt.all()
+		if (success) {
+			if (results && results.length >= 1) {
+				return c.json({ ...results })
+			} else {
+				return c.json({ err: "Zero members" }, 500)
+			}
+		}
+		return c.json({ err: "Member list failed" }, 500)
+	} catch(e) {
+		return c.json({ err: e.message }, 500)
+	}
+
 	return c.json(result)
 })
 
 // user by id
 app.get('/:guid', async c => {
 	const { guid } = c.req.param()
+/*
 	const db = drizzle(c.env.DB)
-	const result = await db.select().from(members).where(eq(members.guid, guid))
+	const result = await db.select().from(members).where(eq(members.guid, guid))*/
+
+	// With the GUID, look up the user in the Members table.
+	try {
+		const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 ').bind(guid)
+		const { results, success } = await stmt.all()
+		if (success) {
+			if (results && results.length >= 1) {
+				const row = results[0]
+			        const user = {name: row.name, role: row.role, email: row.email, refid: row.guid}
+				return c.json({ ...user })
+			} else {
+				return c.json({ err: "Zero members with GUID" }, 500)
+			}
+		}
+		return c.json({ err: "Member by GUID failed" }, 500)
+	} catch(e) {
+		return c.json({ err: e.message }, 500)
+	}
+
 	return c.json(result)
 })
 
@@ -71,16 +108,11 @@ app.delete('/:guid', async c => {
 
 // create user
 app.post('/', async c => {
-	const token = c.req.header('Cf-Access-Jwt-Assertion')
-	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
-	const { payload } = await verify(token, jwks)
-
-	// Do validation on the payload fields.
-
-	const aud = payload.aud
-	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
+	const { payload, good } = await sanitycheckAUD(c)
+	if (!good) {
 		return c.json({ err: "AUD fail" }, 500)
 	}
+
 
 	// TODO Two flows, superuser is creating or visitor is registering.
 	// BUT if we go with a pending approval queue, create should never be done by person.
@@ -95,7 +127,7 @@ app.post('/', async c => {
 		////const db = drizzle(c.env.DB)
 		////await db.insert(members).values({ name: name, email: email, role: role })
 		// TODO insert requires email/guid to be unique
-		const stmt = c.env.DB.prepare('INSERT (?1, ?2, ?3) COLUMNS(NAME, EMAIL, ROLE) INTO members').bind(name, email, role)
+		const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE) VALUES (?1, ?2, ?3)').bind(name, email, role)
 		await stmt.run()
 	} catch {
 		c.status(500)
@@ -113,7 +145,7 @@ app.post('/identify', async c => {
 		return c.json({ err: "AUD fail" }, 500)
 	}
 
-	// TODO ? and register (default role:student) if not exists
+	// With the subject ID in the token, look up the user in the Members table.
 	try {
 		const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 AND DELETED IS NULL').bind(payload.sub)
 		const { results, success } = await stmt.all()
@@ -137,6 +169,7 @@ app.post('/identify', async c => {
 async function sanitycheckAUD(c) {
 	// POST endpoints for initial contact by the nextjs consumer.
 	// We still expect visitors to sign-in via Cloudflare Access (e.g., via registration flow).
+	// Consider multiple AUDs, e.g., staging and prod
 
 	const token = c.req.header('Cf-Access-Jwt-Assertion')
 	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
