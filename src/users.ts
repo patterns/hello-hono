@@ -16,7 +16,7 @@ import {
 
 ////import { members } from './schema'
 type Variables = VerifyRsaJwtEnv
-const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
+const privilegedMethods = ['PUT', 'PATCH', 'DELETE']
 
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 
@@ -43,6 +43,11 @@ app.get('/', async c => {
 	    id: members.guid,
 	}).from(members)*/
 
+	const { payload, good } = await sanitycheckAUD(c)
+	if (!good) {
+		return c.json({ err: "AUD fail" }, 500)
+	}
+
 	// Retrieve the users in the Members table.
 	try {
 		const stmt = c.env.DB.prepare('SELECT NAME,EMAIL,ROLE,GUID FROM members WHERE DELETED IS NULL')
@@ -67,6 +72,11 @@ app.get('/:guid', async c => {
 /*
 	const db = drizzle(c.env.DB)
 	const result = await db.select().from(members).where(eq(members.guid, guid))*/
+
+	const { payload, good } = await sanitycheckAUD(c)
+	if (!good) {
+		return c.json({ err: "AUD fail" }, 500)
+	}
 
 	// With the GUID, look up the user in the Members table.
 	try {
