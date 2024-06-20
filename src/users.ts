@@ -93,7 +93,7 @@ app.post('/', async c => {
 app.post('/identify', async c => {
 	// The identify endpoint is for initial contact by the nextjs consumer.
 	// We still expect visitors to sign-in via Cloudflare Access (e.g., via registration flow).
-/*
+
 	const token = c.req.header('Cf-Access-Jwt-Assertion')
 	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
 	const { payload } = await verify(token, jwks)
@@ -103,11 +103,11 @@ app.post('/identify', async c => {
 	const aud = payload.aud
 	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
 		return c.json({ err: "AUD fail" }, 500)
-	}*/
-	const {payload, passed} = await sanitycheckAUD(c)
-	if (!passed) {
-		return c.json({ err: "AUD fail" }, 500)
 	}
+	////const {payload, passed} = await sanitycheckAUD(c)
+	////if (!passed) {
+	////	return c.json({ err: "AUD fail" }, 500)
+	////}
 
 	// TODO ? and register (default role:student) if not exists
 	try {
