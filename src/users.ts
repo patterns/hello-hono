@@ -16,7 +16,7 @@ import {
 
 import { members } from './schema'
 type Variables = VerifyRsaJwtEnv
-const privilegedMethods = ['GET', 'PUT', 'POST', 'DELETE']
+const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
 
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 
@@ -34,6 +34,7 @@ app.on(privilegedMethods, '/', (c, next) => {
 
 // list users
 app.get('/', async c => {
+
 	const db = drizzle(c.env.DB)
 	const result = await db.select({
 	    firstName: members.name,
@@ -66,6 +67,8 @@ app.delete('/:guid', async c => {
 	return c.text('TODO user delete goes here')
 })
 
+// ***POST*** methods (as general rule) we want to enforce CF Access JWT with more granularity
+
 // create user
 app.post('/', async c => {
 	const { name, email, role } = await c.req.json<Member>()
@@ -86,20 +89,25 @@ app.post('/', async c => {
 	return c.text('Created')
 })
 
-// nextjs initiates confirm of identity by CF Access JWT
-app.patch('/identify', async c => {
-	// The identify endpoint is not guarded by the middleware in order for a initial contact by the nextjs consumer.
+// nextjs initiates confirm of identity (with CF Access JWT)
+app.post('/identify', async c => {
+	// The identify endpoint is for initial contact by the nextjs consumer.
 	// We still expect visitors to sign-in via Cloudflare Access (e.g., via registration flow).
-
+/*
 	const token = c.req.header('Cf-Access-Jwt-Assertion')
 	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
 	const { payload } = await verify(token, jwks)
-/* DEBUG skip aud check for now
-	if (payload.aud[0] != c.env.POLICY_AUD) {
-		c.status(500)
-		return c.json({})
+
+	// Do validation on the payload fields.
+
+	const aud = payload.aud
+	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
+		return c.json({ err: "AUD fail" }, 500)
+	}*/
+	const {payload, passed} = await sanitycheckAUD(c)
+	if (!passed) {
+		return c.json({ err: "AUD fail" }, 500)
 	}
-*/
 
 	// TODO ? and register (default role:student) if not exists
 	try {
@@ -121,5 +129,19 @@ app.patch('/identify', async c => {
 	}
 })
 
+async function enforceAUD(c) {
+	const token = c.req.header('Cf-Access-Jwt-Assertion')
+	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
+	const { payload } = await verify(token, jwks)
+
+	// Do validation on the payload fields.
+
+	const aud = payload.aud
+	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
+		return {payload, false}
+	}
+
+	return {payload, true}
+}
 
 export default app
