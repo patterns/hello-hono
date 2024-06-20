@@ -117,12 +117,26 @@ app.post('/identify', async c => {
 */
 
 	// TODO ? and register (default role:student) if not exists
-	const db = drizzle(c.env.DB)
-	const result = await db.select().from(members).where(eq(members.guid, payload.sub))
-	//const result = await db.query.members.findFirst({
-	//  where: (members, {eq}) => eq(members.guid, payload.sub),
-	//})
-	const { name, email, role, guid } = result
+	////const db = drizzle(c.env.DB)
+	////const result = await db.select().from(members).where(eq(members.guid, payload.sub))
+	////const { name, email, role, guid } = result
+	try {
+		const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 AND DELETED IS NULL').bind(payload.sub)
+		const { results, success, meta } = await stmt.all()
+		if (success) {
+			if (results && results.length >= 1) {
+				const row = results[0]
+				const { name, email, role, guid } = row
+			        const user = {name: name, role: role, email: payload.email, refid: payload.sub}
+				return c.json({ ...user })
+			} else {
+				return c.json({ err: "Zero members with GUID" }, 500)
+			}
+		}
+		return c.json({ err: "Member by GUID failed" }, 500)
+	} catch(e) {
+		return c.json({ err: e.message }, 500)
+	}
 /*
 	const newpl = {
 	  sub: guid,
@@ -133,8 +147,6 @@ app.post('/identify', async c => {
         const user = {firstName: name, lastName: role, username: email, id: guid}
 	return c.json({ ...user, token })
 */
-        const user = {name: name, role: role, email: payload.email, refid: payload.sub}
-	return c.json({ ...user })
 })
 // expected by nextjs proto
 app.post('/register', async c => {
