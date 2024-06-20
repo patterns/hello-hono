@@ -108,19 +108,6 @@ app.post('/', async c => {
 
 // nextjs initiates confirm of identity (with CF Access JWT)
 app.post('/identify', async c => {
-	// The identify endpoint is for initial contact by the nextjs consumer.
-	// We still expect visitors to sign-in via Cloudflare Access (e.g., via registration flow).
-/*
-	const token = c.req.header('Cf-Access-Jwt-Assertion')
-	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
-	const { payload } = await verify(token, jwks)
-
-	// Do validation on the payload fields.
-
-	const aud = payload.aud
-	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
-		return c.json({ err: "AUD fail" }, 500)
-	}*/
 	const { payload, good } = await sanitycheckAUD(c)
 	if (!good) {
 		return c.json({ err: "AUD fail" }, 500)
@@ -146,8 +133,11 @@ app.post('/identify', async c => {
 	}
 })
 
-// TODO busted code?
+// helper for the POST methods (may be collapsed into middleware after we learn to use the policyValidator)
 async function sanitycheckAUD(c) {
+	// POST endpoints for initial contact by the nextjs consumer.
+	// We still expect visitors to sign-in via Cloudflare Access (e.g., via registration flow).
+
 	const token = c.req.header('Cf-Access-Jwt-Assertion')
 	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
 	const { payload } = await verify(token, jwks)
