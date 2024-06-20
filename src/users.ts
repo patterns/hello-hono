@@ -138,10 +138,10 @@ async function enforceAUD(c) {
 
 	const aud = payload.aud
 	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
-		return {payload, false}
+		return { payload: payload, passed: false }
 	}
 
-	return {payload, true}
+	return { payload: payload, passed: true }
 }
 
 export default app
