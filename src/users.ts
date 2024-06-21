@@ -164,7 +164,7 @@ app.post('/identify', async c => {
 	const secret = c.env.JWT_SECRET
 	const token = await sign(cookiedata, secret)
 
-				setCookie(c, 'authorization', token)
+				setCookie(c, 'authorization', token, { httpOnly: true })
 				return c.json({ ...user })
 			} else {
 				return c.json({ err: "Zero members with GUID" }, 500)
