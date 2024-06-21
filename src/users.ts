@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { jwt, sign } from 'hono/jwt'
+import type { JwtVariables } from 'hono/jwt'
 
 ////import { drizzle } from 'drizzle-orm/d1'
 ////import { eq } from 'drizzle-orm'
@@ -14,23 +16,17 @@ import {
   createGetCookieByKey,
 } from 'verify-rsa-jwt-cloudflare-worker'
 
-////import { members } from './schema'
 type Variables = VerifyRsaJwtEnv
-const privilegedMethods = ['PUT', 'PATCH', 'DELETE']
 
+// enable middleware for JWT
+const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
+type Variables = JwtVariables
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
-
-// enable middleware for CF Access JWT
 app.on(privilegedMethods, '/', (c, next) => {
-	// TODO for updates, payloadValidator needs to enforce target is the owner (or superuser)
-
-	const verifymw = verifyRsaJwt({
-		jwksUri: c.env.JWKS_URI,
-		kvstore: c.env.VERIFY_RSA_JWT,
-		payloadValidator: ({payload, c}) => { /* chk role/AUD, else throw err */ },
-	})
-	return verifymw(c, next)
+  const jwtmw = jwt({ secret: c.env.JWT_SECRET, cookie: 'authorization' })
+  return jwtmw(c, next)
 })
+
 
 // list users
 app.get('/', async c => {
@@ -43,10 +39,6 @@ app.get('/', async c => {
 	    id: members.guid,
 	}).from(members)*/
 
-	const { payload, good } = await sanitycheckAUD(c)
-	if (!good) {
-		return c.json({ err: "AUD fail" }, 500)
-	}
 
 	// Retrieve the users in the Members table.
 	try {
@@ -73,10 +65,6 @@ app.get('/:guid', async c => {
 	const db = drizzle(c.env.DB)
 	const result = await db.select().from(members).where(eq(members.guid, guid))*/
 
-	const { payload, good } = await sanitycheckAUD(c)
-	if (!good) {
-		return c.json({ err: "AUD fail" }, 500)
-	}
 
 	// With the GUID, look up the user in the Members table.
 	try {
@@ -154,6 +142,7 @@ app.post('/identify', async c => {
 		return c.json({ err: "AUD fail" }, 500)
 	}
 
+
 	// With the subject ID in the token, look up the user in the Members table.
 	try {
 		const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 AND DELETED IS NULL').bind(payload.sub)
@@ -161,8 +150,19 @@ app.post('/identify', async c => {
 		if (success) {
 			if (results && results.length >= 1) {
 				const row = results[0]
-				const { name, email, role, guid } = row
+				const { name, email, role } = row
 			        const user = {name: name, role: role, email: email, refid: payload.sub}
+
+	// create auth cookie between nextjs and us/api (12 hour ttl)
+	const cookiedata = {
+	  sub: payload.sub,
+	  role: role,
+	  exp: Math.floor(Date.now() / 1000) + 60 * 5*12 *12,
+	}
+	const secret = c.env.JWT_SECRET
+	const token = await sign(cookiedata, secret)
+
+				setCookie(c, 'authorization', token)
 				return c.json({ ...user })
 			} else {
 				return c.json({ err: "Zero members with GUID" }, 500)
