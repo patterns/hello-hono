@@ -21,12 +21,12 @@ import {
 type Variables = VerifyRsaJwtEnv
 
 // enable middleware for JWT
-const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
+const privilegedMethods = [ 'PUT', 'PATCH', 'DELETE']
 type Variables = JwtVariables
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 app.on(privilegedMethods, '/', (c, next) => {
-  ////const jwtmw = jwt({ secret: c.env.JWT_SECRET, cookie: 'authorization' })
-  const jwtmw = jwt({ secret: c.env.JWT_SECRET })
+  const jwtmw = jwt({ secret: c.env.JWT_SECRET, cookie: 'authorization' })
+  ////const jwtmw = jwt({ secret: c.env.JWT_SECRET })
   return jwtmw(c, next)
 })
 
@@ -42,6 +42,10 @@ app.get('/', async c => {
 	    id: members.guid,
 	}).from(members)*/
 
+	const { payload, good } = await sanitycheckAUD(c)
+	if (!good) {
+		return c.json({ err: "AUD fail" }, 500)
+	}
 
 	// Retrieve the users in the Members table.
 	try {
@@ -68,6 +72,10 @@ app.get('/:guid', async c => {
 	const db = drizzle(c.env.DB)
 	const result = await db.select().from(members).where(eq(members.guid, guid))*/
 
+	const { payload, good } = await sanitycheckAUD(c)
+	if (!good) {
+		return c.json({ err: "AUD fail" }, 500)
+	}
 
 	// With the GUID, look up the user in the Members table.
 	try {
