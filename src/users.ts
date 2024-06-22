@@ -25,7 +25,8 @@ const privilegedMethods = ['GET', 'PUT', 'PATCH', 'DELETE']
 type Variables = JwtVariables
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 app.on(privilegedMethods, '/', (c, next) => {
-  const jwtmw = jwt({ secret: c.env.JWT_SECRET, cookie: 'authorization' })
+  ////const jwtmw = jwt({ secret: c.env.JWT_SECRET, cookie: 'authorization' })
+  const jwtmw = jwt({ secret: c.env.JWT_SECRET })
   return jwtmw(c, next)
 })
 
