@@ -106,26 +106,29 @@ app.post('/', async c => {
         return c.json({ err: "AUD fail" }, 500)
     }
 
-    // TODO Two flows, superuser is creating or visitor is registering.
+    // Two flows, superuser is creating or visitor is registering.
     // BUT if we go with a pending approval queue, create should never be done by person.
 
-	////const { name, email, role } = await c.req.json<Member>()
-	const { name, email } = await c.req.json<Member>()
+    const member = await memberByGuid(c, payload.sub)
+    if (member) {
+        // is there a pending membership in the queue?
+        // TODO need to avoid a DELETED member re-registering?
+        return c.json({ err: "Existing membership fail" }, 500)
+    }
 
-	if (!name) return c.text('Missing name value for new user')
-	////if (!email) return c.text('Missing email value for new user')
-	////if (!role) return c.text('Missing role value for new user')
+    const { name } = await c.req.json<Member>()
+    if (!name) return c.text('Missing name value for new user')
 
     try {
-////const db = drizzle(c.env.DB)
-////await db.insert(members).values({ name: name, email: email, role: role })
         // TODO insert requires email to be unique
-        // TODO generate GUID
-        const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE) VALUES (?1, ?2, ?3)').bind(name, email, 'PENDING')
+        const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE, GUID) VALUES (?1, ?2, ?3, ?4)')
+
+        stmt.bind(name, payload.email, 'PENDING', payload.sub)
         await stmt.run()
+
     } catch {
         c.status(500)
-        return c.text('Something went wrong')
+        return c.text('Create member fail')
     }
 
     c.status(201)
@@ -139,31 +142,13 @@ app.post('/identify', async c => {
         return c.json({ err: "AUD fail" }, 500)
     }
 
+    // With the subject ID in the token, look up the visitor in the Members table.
     const member = await memberByGuid(c, payload.sub)
     if (!member) {
         return c.json({ err: "GUID not found" }, 500)
     }
 
     return c.json({ ...member })
-/******************************
-    // With the subject ID in the token, look up the visitor in the Members table.
-    try {
-        const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 AND DELETED IS NULL').bind(payload.sub)
-        const { results, success } = await stmt.all()
-        if (success) {
-            if (results && results.length >= 1) {
-                const row = results[0]
-                const { name, email, role } = row
-                const member = {name: name, role: role, email: email, refid: payload.sub}
-                return c.json({ ...member })
-             } else {
-                return c.json({ err: "Zero members with GUID" }, 500)
-             }
-        }
-        return c.json({ err: "Member by GUID failed" }, 500)
-    } catch(e) {
-        return c.json({ err: e.message }, 500)
-    }************************/
 })
 
 // helper for the POST methods (may be collapsed into middleware after we learn to use the policyValidator)
