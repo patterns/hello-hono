@@ -25,5 +25,14 @@ declare module 'hono' {
     name: string
     email: string
     role: string
+    guid: string
+  }
+
+  interface Course {
+    title: string
+    description: string
+    category: string
+    url: string
+    guid: string
   }
 }

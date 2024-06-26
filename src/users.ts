@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import { jwt, sign } from 'hono/jwt'
-import { setCookie } from 'hono/cookie'
+/////import { jwt, sign } from 'hono/jwt'
+////import { setCookie } from 'hono/cookie'
 import type { JwtVariables } from 'hono/jwt'
 
 
@@ -25,23 +25,18 @@ const privilegedMethods = [ 'PUT', 'PATCH', 'DELETE']
 type Variables = JwtVariables
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
 app.on(privilegedMethods, '/', (c, next) => {
-  const jwtmw = jwt({ secret: c.env.JWT_SECRET, cookie: 'authorization' })
-  ////const jwtmw = jwt({ secret: c.env.JWT_SECRET })
+  ////const jwtmw = jwt({ secret: c.env.JWT_SECRET, cookie: 'authorization' })
+  const jwtmw = verifyRsaJwt({
+    jwksUri: c.env.JWKS_URI,
+    kvStore: c.env.PUBLIC_JWK_CACHE_KV,
+    payloadValidator: ({payload, c}) => { /* Validate the payload, throw an error if invalid */ },
+  })
   return jwtmw(c, next)
 })
 
 
 // list users
 app.get('/', async c => {
-/*
-	const db = drizzle(c.env.DB)
-	const result = await db.select({
-	    firstName: members.name,
-	    lastName: members.role,
-	    username: members.email,
-	    id: members.guid,
-	}).from(members)*/
-
 	const { payload, good } = await sanitycheckAUD(c)
 	if (!good) {
 		return c.json({ err: "AUD fail" }, 500)
@@ -53,8 +48,8 @@ app.get('/', async c => {
 		const { results, success } = await stmt.all()
 		if (success) {
 			if (results && results.length >= 1) {
-				const users = results
-				return c.json({ ...users })
+				////const users = results
+				return c.json({ ...results })
 			} else {
 				return c.json({ err: "Zero members" }, 500)
 			}
@@ -131,19 +126,20 @@ app.post('/', async c => {
 	if (!email) return c.text('Missing email value for new user')
 	if (!role) return c.text('Missing role value for new user')
 
-	try {
-		////const db = drizzle(c.env.DB)
-		////await db.insert(members).values({ name: name, email: email, role: role })
-		// TODO insert requires email/guid to be unique
-		const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE) VALUES (?1, ?2, ?3)').bind(name, email, role)
-		await stmt.run()
-	} catch {
-		c.status(500)
-		return c.text('Something went wrong')
-	}
+    try {
+////const db = drizzle(c.env.DB)
+////await db.insert(members).values({ name: name, email: email, role: role })
+        // TODO insert requires email to be unique
+        // TODO generate GUID
+        const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE) VALUES (?1, ?2, ?3)').bind(name, email, role)
+        await stmt.run()
+    } catch {
+        c.status(500)
+        return c.text('Something went wrong')
+    }
 
-	c.status(201)
-	return c.text('Created')
+    c.status(201)
+    return c.text('Created')
 })
 
 // nextjs initiates confirm of identity (with CF Access JWT)
@@ -163,7 +159,7 @@ app.post('/identify', async c => {
 				const row = results[0]
 				const { name, email, role } = row
 			        const user = {name: name, role: role, email: email, refid: payload.sub}
-
+/*********************
 	// create auth cookie between nextjs and us/api (12 hour ttl)
 	const cookiedata = {
 	  sub: payload.sub,
@@ -173,7 +169,7 @@ app.post('/identify', async c => {
 	const secret = c.env.JWT_SECRET
 	const token = await sign(cookiedata, secret)
 
-				setCookie(c, 'authorization', token, { httpOnly: true })
+				setCookie(c, 'authorization', token, { httpOnly: true })	******/
 				return c.json({ ...user })
 			} else {
 				return c.json({ err: "Zero members with GUID" }, 500)
