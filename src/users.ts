@@ -1,7 +1,4 @@
 import { Hono } from 'hono'
-/////import { jwt, sign } from 'hono/jwt'
-////import { setCookie } from 'hono/cookie'
-import type { JwtVariables } from 'hono/jwt'
 
 
 ////import { drizzle } from 'drizzle-orm/d1'
@@ -19,13 +16,11 @@ import {
 } from 'verify-rsa-jwt-cloudflare-worker'
 
 type Variables = VerifyRsaJwtEnv
-
-// enable middleware for JWT
 const privilegedMethods = [ 'PUT', 'PATCH', 'DELETE']
-type Variables = JwtVariables
 const app = new Hono<{Bindings: Bindings, Variables: Variables}>()
+
+// enable middleware for methods besides POST/GET
 app.on(privilegedMethods, '/', (c, next) => {
-  ////const jwtmw = jwt({ secret: c.env.JWT_SECRET, cookie: 'authorization' })
   const jwtmw = verifyRsaJwt({
     jwksUri: c.env.JWKS_URI,
     kvStore: c.env.PUBLIC_JWK_CACHE_KV,
@@ -37,41 +32,36 @@ app.on(privilegedMethods, '/', (c, next) => {
 
 // list users
 app.get('/', async c => {
-	const { payload, good } = await sanitycheckAUD(c)
-	if (!good) {
-		return c.json({ err: "AUD fail" }, 500)
-	}
+    const { payload, good } = await sanitycheckAUD(c)
+    if (!good) {
+        return c.json({ err: "AUD fail" }, 500)
+    }
 
-	// Retrieve the users in the Members table.
-	try {
-		const stmt = c.env.DB.prepare('SELECT NAME,EMAIL,ROLE,GUID FROM members WHERE DELETED IS NULL')
-		const { results, success } = await stmt.all()
-		if (success) {
-			if (results && results.length >= 1) {
-				////const users = results
-				return c.json({ ...results })
-			} else {
-				return c.json({ err: "Zero members" }, 500)
-			}
-		}
-		return c.json({ err: "Member list failed" }, 500)
-	} catch(e) {
-		return c.json({ err: e.message }, 500)
-	}
+    // Retrieve the users in the Members table.
+    try {
+        const stmt = c.env.DB.prepare('SELECT NAME,EMAIL,ROLE,GUID FROM members WHERE DELETED IS NULL')
+        const { results, success } = await stmt.all()
+        if (success) {
+            if (results && results.length >= 1) {
+                return c.json({ ...results })
+            } else {
+                return c.json({ err: "Zero members" }, 500)
+            }
+        }
+        return c.json({ err: "Member list failed" }, 500)
+    } catch(e) {
+        return c.json({ err: e.message }, 500)
+    }
 })
 
 // user by id
 app.get('/:guid', async c => {
-	const { guid } = c.req.param()
-/*
-	const db = drizzle(c.env.DB)
-	const result = await db.select().from(members).where(eq(members.guid, guid))*/
+    const { payload, good } = await sanitycheckAUD(c)
+    if (!good) {
+        return c.json({ err: "AUD fail" }, 500)
+    }
 
-	const { payload, good } = await sanitycheckAUD(c)
-	if (!good) {
-		return c.json({ err: "AUD fail" }, 500)
-	}
-
+    const { guid } = c.req.param()
 	// With the GUID, look up the user in the Members table.
 	try {
 		const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 ').bind(guid)
@@ -107,31 +97,31 @@ app.delete('/:guid', async c => {
 	return c.text('TODO user delete goes here')
 })
 
-// ***POST*** methods (as general rule) we want to enforce CF Access JWT with more granularity
+
 
 // create user
 app.post('/', async c => {
-	const { payload, good } = await sanitycheckAUD(c)
-	if (!good) {
-		return c.json({ err: "AUD fail" }, 500)
-	}
+    const { payload, good } = await sanitycheckAUD(c)
+    if (!good) {
+        return c.json({ err: "AUD fail" }, 500)
+    }
 
+    // TODO Two flows, superuser is creating or visitor is registering.
+    // BUT if we go with a pending approval queue, create should never be done by person.
 
-	// TODO Two flows, superuser is creating or visitor is registering.
-	// BUT if we go with a pending approval queue, create should never be done by person.
-
-	const { name, email, role } = await c.req.json<Member>()
+	////const { name, email, role } = await c.req.json<Member>()
+	const { name, email } = await c.req.json<Member>()
 
 	if (!name) return c.text('Missing name value for new user')
-	if (!email) return c.text('Missing email value for new user')
-	if (!role) return c.text('Missing role value for new user')
+	////if (!email) return c.text('Missing email value for new user')
+	////if (!role) return c.text('Missing role value for new user')
 
     try {
 ////const db = drizzle(c.env.DB)
 ////await db.insert(members).values({ name: name, email: email, role: role })
         // TODO insert requires email to be unique
         // TODO generate GUID
-        const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE) VALUES (?1, ?2, ?3)').bind(name, email, role)
+        const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE) VALUES (?1, ?2, ?3)').bind(name, email, 'PENDING')
         await stmt.run()
     } catch {
         c.status(500)
@@ -142,64 +132,73 @@ app.post('/', async c => {
     return c.text('Created')
 })
 
-// nextjs initiates confirm of identity (with CF Access JWT)
+// nextjs initiates confirm of identity (using CF Access JWT)
 app.post('/identify', async c => {
-	const { payload, good } = await sanitycheckAUD(c)
-	if (!good) {
-		return c.json({ err: "AUD fail" }, 500)
-	}
+    const { payload, good } = await sanitycheckAUD(c)
+    if (!good) {
+        return c.json({ err: "AUD fail" }, 500)
+    }
 
+    const member = memberByGuid(c, payload.sub)
+    if (!member) {
+        return c.json({ err: "GUID not found" }, 500)
+    }
 
-	// With the subject ID in the token, look up the user in the Members table.
-	try {
-		const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 AND DELETED IS NULL').bind(payload.sub)
-		const { results, success } = await stmt.all()
-		if (success) {
-			if (results && results.length >= 1) {
-				const row = results[0]
-				const { name, email, role } = row
-			        const user = {name: name, role: role, email: email, refid: payload.sub}
-/*********************
-	// create auth cookie between nextjs and us/api (12 hour ttl)
-	const cookiedata = {
-	  sub: payload.sub,
-	  role: role,
-	  exp: Math.floor(Date.now() / 1000) + 60 * 5*12 *12,
-	}
-	const secret = c.env.JWT_SECRET
-	const token = await sign(cookiedata, secret)
-
-				setCookie(c, 'authorization', token, { httpOnly: true })	******/
-				return c.json({ ...user })
-			} else {
-				return c.json({ err: "Zero members with GUID" }, 500)
-			}
-		}
-		return c.json({ err: "Member by GUID failed" }, 500)
-	} catch(e) {
-		return c.json({ err: e.message }, 500)
-	}
+    return c.json({ ...member })
+/******************************
+    // With the subject ID in the token, look up the visitor in the Members table.
+    try {
+        const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 AND DELETED IS NULL').bind(payload.sub)
+        const { results, success } = await stmt.all()
+        if (success) {
+            if (results && results.length >= 1) {
+                const row = results[0]
+                const { name, email, role } = row
+                const member = {name: name, role: role, email: email, refid: payload.sub}
+                return c.json({ ...member })
+             } else {
+                return c.json({ err: "Zero members with GUID" }, 500)
+             }
+        }
+        return c.json({ err: "Member by GUID failed" }, 500)
+    } catch(e) {
+        return c.json({ err: e.message }, 500)
+    }************************/
 })
 
 // helper for the POST methods (may be collapsed into middleware after we learn to use the policyValidator)
 async function sanitycheckAUD(c) {
-	// POST endpoints for initial contact by the nextjs consumer.
-	// We still expect visitors to sign-in via Cloudflare Access (e.g., via registration flow).
-	// Consider multiple AUDs, e.g., staging and prod
+    // POST/GET endpoints for the nextjs consumer.
+    // We still expect visitors to sign-in via Cloudflare Access.
+    // Consider multiple AUDs, e.g., staging and prod
 
-	const token = c.req.header('Cf-Access-Jwt-Assertion')
-	const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
-	const { payload } = await verify(token, jwks)
+    const token = c.req.header('Cf-Access-Jwt-Assertion')
+    const jwks = await getJwks(c.env.JWKS_URI, useKVStore(c.env.VERIFY_RSA_JWT))
+    const { payload } = await verify(token, jwks)
 
-	// Do validation on the payload fields.
+    // Do validation on the payload fields.
+    const aud = payload.aud
+    if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
+        return { payload: payload, good: false }
+    }
 
-	const aud = payload.aud
-	if (!aud || aud.length == 0 || aud[0] != c.env.POLICY_AUD) {
-		return { payload: payload, good: false }
-	}
-
-	return { payload: payload, good: true }
+    return { payload: payload, good: true }
 }
+// lookup visitor in the Member table
+async function memberByGuid(c, guid) {
+    try {
+        const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 AND DELETED IS NULL').bind(guid)
+        const { results, success } = await stmt.all()
+        if (!success) return null
+        if (!results || results.length ==0) return null
 
+        const row = results[0]
+        const { name, email, role } = row
+        return {name: name, role: role, email: email, refid: guid}
+    } catch {
+        // TODO better error handling
+        return null
+    }
+}
 
 export default app
