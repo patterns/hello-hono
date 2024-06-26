@@ -139,7 +139,7 @@ app.post('/identify', async c => {
         return c.json({ err: "AUD fail" }, 500)
     }
 
-    const member = memberByGuid(c, payload.sub)
+    const member = await memberByGuid(c, payload.sub)
     if (!member) {
         return c.json({ err: "GUID not found" }, 500)
     }
