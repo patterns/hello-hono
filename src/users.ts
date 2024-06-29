@@ -124,15 +124,15 @@ app.post('/', async c => {
         const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE, GUID) VALUES (?1, ?2, ?3, ?4)')
 
         stmt.bind(name, payload.email, 'PENDING', payload.sub)
-        await stmt.run()
+        const { success } = await stmt.run()
+        if (!success) return c.json({ err: "Create membership fail"}, 500)
 
+        const confirm = await memberByGuid(c, payload.sub)
+	return c.json({ ...confirm }, 201)
     } catch {
         c.status(500)
         return c.text('Create member fail')
     }
-
-    c.status(201)
-    return c.text('Created')
 })
 
 // nextjs initiates confirm of identity (using CF Access JWT)
