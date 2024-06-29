@@ -127,8 +127,8 @@ app.post('/', async c => {
     try {
         // TODO insert requires email to be unique
         const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE, GUID) VALUES (?1, ?2, ?3, ?4)')
+            .bind(name, payload.email, 'PENDING', payload.sub)
 
-        stmt.bind(name, payload.email, 'PENDING', payload.sub)
         const { success } = await stmt.run()
         if (!success) return c.json({ err: "Create membership fail"}, 500)
 
