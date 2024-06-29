@@ -116,8 +116,11 @@ app.post('/', async c => {
         return c.json({ err: "Existing membership fail" }, 500)
     }
 
-    const { name } = await c.req.json<Member>()
-    if (!name) return c.text('Missing name value for new user')
+    let { name } = await c.req.json<Member>()
+    if (!name) {
+        //TODO normally this is a validation check, but for DEBUG let's just stuff a value for the field
+       name = payload.sub
+    }
 
     try {
         // TODO insert requires email to be unique
