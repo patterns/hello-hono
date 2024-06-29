@@ -115,12 +115,14 @@ app.post('/', async c => {
         // TODO need to avoid a DELETED member re-registering?
         return c.json({ err: "Existing membership fail" }, 500)
     }
-
+/****************************
     let { name } = await c.req.json<Member>()
     if (!name) {
         //TODO normally this is a validation check, but for DEBUG let's just stuff a value for the field
        name = payload.sub
-    }
+    }*********************/
+
+    const name = payload.sub
 
     try {
         // TODO insert requires email to be unique
