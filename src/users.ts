@@ -126,8 +126,9 @@ app.post('/', async c => {
 
     try {
         // TODO insert requires email to be unique
-        await c.env.DB.prepare('INSERT INTO members (name, email, role, guid) VALUES (?1, ?2, ?3, ?4)')
-            .bind(name, payload.email, 'PENDING', payload.sub)
+        const dt = Date.now().toISOString()
+        await c.env.DB.prepare('INSERT INTO members (name, email, role, guid, created, modified) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
+            .bind(name, payload.email, 'PENDING', payload.sub, dt, dt)
             .run()
 
 	return c.json({ data: "ok" }, 201)
