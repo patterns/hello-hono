@@ -1,9 +1,4 @@
 import { Hono } from 'hono'
-
-
-////import { drizzle } from 'drizzle-orm/d1'
-////import { eq } from 'drizzle-orm'
-
 import {
   getJwks,
   useKVStore,
@@ -14,6 +9,7 @@ import {
   getPayloadFromContext,
   createGetCookieByKey,
 } from 'verify-rsa-jwt-cloudflare-worker'
+import * as d1 from './d1'
 
 type Variables = VerifyRsaJwtEnv
 const privilegedMethods = [ 'PUT', 'PATCH', 'DELETE']
@@ -109,7 +105,7 @@ app.post('/', async c => {
     // Two flows, superuser is creating or visitor is registering.
     // BUT if we go with a pending approval queue, create should never be done by person.
 
-    const member = await memberByGuid(c, payload.sub)
+    const member = await d1.memberByGuid(c, payload.sub)
     if (member) {
         // is there a pending membership in the queue?
         // TODO need to avoid a DELETED member re-registering?
@@ -123,7 +119,10 @@ app.post('/', async c => {
     }*********************/
 
     const name = payload.sub
-
+    const success = d1.createMember(c, name, payload.email, payload.sub)
+    if (success) return c.json({ refid: payload.sub }, 201)
+    return c.json({ err: "Members DML statement run fail" }, 500)
+/********************************
     try {
         // TODO insert requires email to be unique
         const now = Date.now()
@@ -135,6 +134,7 @@ app.post('/', async c => {
     } catch {
         return c.json({ err: "Members DML statement run fail"}, 500)
     }
+**************************/
 })
 
 // nextjs initiates confirm of identity (using CF Access JWT)
@@ -145,7 +145,7 @@ app.post('/identify', async c => {
     }
 
     // With the subject ID in the token, look up the visitor in the Members table.
-    const member = await memberByGuid(c, payload.sub)
+    const member = await d1.memberByGuid(c, payload.sub)
     if (!member) {
         return c.json({ err: "GUID not found" }, 500)
     }
@@ -171,6 +171,7 @@ async function sanitycheckAUD(c) {
 
     return { payload: payload, good: true }
 }
+/*************************
 // lookup visitor in the Member table
 async function memberByGuid(c, guid) {
     try {
@@ -187,5 +188,5 @@ async function memberByGuid(c, guid) {
         return null
     }
 }
-
+********************/
 export default app
