@@ -93,11 +93,9 @@ app.delete('/:guid', async c => {
 	return c.text('TODO user delete goes here')
 })
 
-
-
 // create user
 app.post('/', async c => {
-    const { payload, good } = await sanitycheckAUD(c)
+    const { payload, good, token } = await sanitycheckAUD(c)
     if (!good) {
         return c.json({ err: "AUD fail" }, 500)
     }
@@ -113,28 +111,15 @@ app.post('/', async c => {
     }
 /****************************
     let { name } = await c.req.json<Member>()
-    if (!name) {
-        //TODO normally this is a validation check, but for DEBUG let's just stuff a value for the field
-       name = payload.sub
     }*********************/
+    // DEBUG fetch extra fields
+    const ident = userIdentity(token)
 
     const name = payload.sub
-    const success = d1.createMember(c, name, payload.email, payload.sub)
-    if (success) return c.json({ refid: payload.sub }, 201)
-    return c.json({ err: "Members DML statement run fail" }, 500)
-/********************************
-    try {
-        // TODO insert requires email to be unique
-        const now = Date.now()
-        await c.env.DB.prepare('INSERT INTO members (name, email, role, guid, created, modified) VALUES (?1, ?2, ?3, ?4, ?5, ?6)')
-            .bind(name, payload.email, 'PENDING', payload.sub, now, now)
-            .run()
 
-	return c.json({ data: "ok" }, 201)
-    } catch {
-        return c.json({ err: "Members DML statement run fail"}, 500)
-    }
-**************************/
+    const success = d1.createMember(c, name, payload.email, payload.sub)
+    if (success) return c.json(ident, 201)
+    return c.json({ err: "Members DML statement run fail" }, 500)
 })
 
 // nextjs initiates confirm of identity (using CF Access JWT)
@@ -169,24 +154,24 @@ async function sanitycheckAUD(c) {
         return { payload: payload, good: false }
     }
 
-    return { payload: payload, good: true }
+    return { payload: payload, good: true, token: token }
 }
-/*************************
-// lookup visitor in the Member table
-async function memberByGuid(c, guid) {
-    try {
-        const stmt = c.env.DB.prepare('SELECT * FROM members WHERE GUID = ?1 AND DELETED IS NULL').bind(guid)
-        const { results, success } = await stmt.all()
-        if (!success) return null
-        if (!results || results.length ==0) return null
 
-        const row = results[0]
-        const { name, email, role } = row
-        return {name: name, role: role, email: email, refid: guid}
-    } catch {
-        // TODO better error handling
-        return null
+// CF provides extra identity fields separately
+async function userIdentity(token) {
+    const value = `CF_Authorization=${token}`
+
+    try {
+        const res = await fetch(c.env.USER_IDENTIY_URL, {
+                headers: { "cookie": value },
+        })
+
+        const data = await res.json()
+        return data
+    } catch (error) {
+        console.log('CF user ident:', error)
+        return { error: error }
     }
 }
-********************/
+
 export default app

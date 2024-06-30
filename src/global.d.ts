@@ -14,6 +14,7 @@ declare module 'hono' {
       VERIFY_RSA_JWT: string
       PUBLIC_JWK_CACHE_KV: string
       PUBLIC_JWK_CACHE_KEY: string
+      USER_IDENTITY_URL: string
       FIREBASE_PROJECT_ID: string
       FIREBASE_API_KEY: string
       FIREBASE_AUTH_DOMAIN: string
