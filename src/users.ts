@@ -126,17 +126,14 @@ app.post('/', async c => {
 
     try {
         // TODO insert requires email to be unique
-        const stmt = c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE, GUID) VALUES (?1, ?2, ?3, ?4)')
+        const { success } = await c.env.DB.prepare('INSERT INTO members (NAME, EMAIL, ROLE, GUID) VALUES (?1, ?2, ?3, ?4)')
             .bind(name, payload.email, 'PENDING', payload.sub)
-
-        const { success } = await stmt.run()
+            .run()
         if (!success) return c.json({ err: "Create membership fail"}, 500)
 
-        const confirm = await memberByGuid(c, payload.sub)
-	return c.json({ ...confirm }, 201)
+	return c.json({ data: "ok" }, 201)
     } catch {
-        c.status(500)
-        return c.text('Create member fail')
+        return c.json({ err: "Members DML statement run fail"}, 500)
     }
 })
 
