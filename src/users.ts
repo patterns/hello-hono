@@ -109,13 +109,10 @@ app.post('/', async c => {
         // TODO need to avoid a DELETED member re-registering?
         return c.json({ err: "Existing membership fail" }, 500)
     }
-/****************************
-    let { name } = await c.req.json<Member>()
-    }*********************/
-    // DEBUG fetch extra fields
-    const ident = userIdentity(token)
 
-    const name = payload.sub
+    // DEBUG fetch extra fields
+    ////const ident = userIdentity(token)
+    const name = guessName(payload.email)
 
     const success = d1.createMember(c, name, payload.email, payload.sub)
     if (success) return c.json(ident, 201)
@@ -172,6 +169,19 @@ async function userIdentity(token) {
         console.log('CF user ident:', error)
         return { error: error }
     }
+}
+
+// a best guess of the name using the email
+function guessName(email) {
+    // easiest shorcut is to use the text leftmost of @ in the email
+
+    const index = email.indexOf('@')
+    if (index > -1) {
+        const sub = email.slice(0, index)
+        return sub.trim()
+    }
+
+    return email
 }
 
 export default app
